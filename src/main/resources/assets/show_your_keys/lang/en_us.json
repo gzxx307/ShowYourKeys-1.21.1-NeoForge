@@ -1,30 +1,29 @@
 {
-  "itemGroup.show_your_keys": "Show Your Keys",
-
   "hint.show_your_keys.mine":             "Mine",
-  "hint.show_your_keys.mine_wrong_tool":  "Mine (wrong tool)",
-
   "hint.show_your_keys.interact":         "Interact",
   "hint.show_your_keys.interact_entity":  "Interact",
-
   "hint.show_your_keys.attack":           "Attack",
+  "hint.show_your_keys.place_block":      "Place",
 
   "hint.show_your_keys.eat":             "Eat",
   "hint.show_your_keys.drink_potion":    "Drink Potion",
   "hint.show_your_keys.draw_bow":        "Draw",
   "hint.show_your_keys.charge_trident":  "Charge",
   "hint.show_your_keys.throw_item":      "Throw",
+  "hint.show_your_keys.spawn_entity":    "Spawn Mob",
 
-  "hint.show_your_keys.dismount":            "Dismount",
-  "hint.show_your_keys.steer":              "Steer",
-  "hint.show_your_keys.horse_jump":         "Jump",
-  "hint.show_your_keys.steer_boat":         "Row",
-  "hint.show_your_keys.accelerate_minecart":"Accelerate",
-  "hint.show_your_keys.board_vehicle":      "Board",
-
-  "hint.show_your_keys.mount":   "Mount",
-  "hint.show_your_keys.tame":    "Tame",
+  "hint.show_your_keys.dismount":             "Dismount",
+  "hint.show_your_keys.steer":               "Steer",
+  "hint.show_your_keys.horse_jump":          "Jump Charge",
+  "hint.show_your_keys.steer_boat":          "Row",
+  "hint.show_your_keys.accelerate_minecart": "Accelerate",
+  "hint.show_your_keys.board_vehicle":       "Board",
+  "hint.show_your_keys.mount":               "Mount",
+  "hint.show_your_keys.tame":                "Tame",
 
   "hint.show_your_keys.swim_up":   "Swim Up",
-  "hint.show_your_keys.swim_down": "Dive"
+  "hint.show_your_keys.swim_down": "Dive",
+
+  "hint.show_your_keys.prefix.wrong_tool":  "Wrong Tool",
+  "hint.show_your_keys.prefix.not_charged": "Not Charged"
 }

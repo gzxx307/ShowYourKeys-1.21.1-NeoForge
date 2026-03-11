@@ -1,30 +1,29 @@
 {
-  "itemGroup.show_your_keys": "Show Your Keys",
-
   "hint.show_your_keys.mine":             "挖掘",
-  "hint.show_your_keys.mine_wrong_tool":  "挖掘 (工具不对)",
-
   "hint.show_your_keys.interact":         "交互",
   "hint.show_your_keys.interact_entity":  "交互",
-
   "hint.show_your_keys.attack":           "攻击",
+  "hint.show_your_keys.place_block":      "放置",
 
   "hint.show_your_keys.eat":             "食用",
   "hint.show_your_keys.drink_potion":    "饮用药水",
   "hint.show_your_keys.draw_bow":        "蓄力射击",
   "hint.show_your_keys.charge_trident":  "蓄力投掷",
   "hint.show_your_keys.throw_item":      "投掷",
+  "hint.show_your_keys.spawn_entity":    "召唤生物",
 
-  "hint.show_your_keys.dismount":            "下马 / 离开",
-  "hint.show_your_keys.steer":              "操控方向",
-  "hint.show_your_keys.horse_jump":         "跳跃蓄力",
-  "hint.show_your_keys.steer_boat":         "划船",
-  "hint.show_your_keys.accelerate_minecart":"加速",
-  "hint.show_your_keys.board_vehicle":      "乘坐",
-
-  "hint.show_your_keys.mount":   "骑乘",
-  "hint.show_your_keys.tame":    "驯服",
+  "hint.show_your_keys.dismount":             "下马 / 离开",
+  "hint.show_your_keys.steer":               "操控方向",
+  "hint.show_your_keys.horse_jump":          "跳跃蓄力",
+  "hint.show_your_keys.steer_boat":          "划船",
+  "hint.show_your_keys.accelerate_minecart": "加速",
+  "hint.show_your_keys.board_vehicle":       "乘坐",
+  "hint.show_your_keys.mount":               "骑乘",
+  "hint.show_your_keys.tame":                "驯服",
 
   "hint.show_your_keys.swim_up":   "上浮",
-  "hint.show_your_keys.swim_down": "下潜"
+  "hint.show_your_keys.swim_down": "下潜",
+
+  "hint.show_your_keys.prefix.wrong_tool":  "工具错误",
+  "hint.show_your_keys.prefix.not_charged": "蓄力未完成"
 }
