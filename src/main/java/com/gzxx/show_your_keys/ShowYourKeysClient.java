@@ -1,6 +1,9 @@
 package com.gzxx.show_your_keys;
 
 import com.gzxx.show_your_keys.hint.HintEngine;
+import com.gzxx.show_your_keys.hint.provider.FallbackHintProvider;
+import com.gzxx.show_your_keys.hint.provider.ItemAbilityHintProvider;
+import com.gzxx.show_your_keys.hint.provider.MovementHintProvider;
 import com.gzxx.show_your_keys.hint.provider.VanillaHintProvider;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -10,23 +13,33 @@ import org.slf4j.Logger;
 /**
  * 客户端初始化入口。
  *
- * <p>NeoForge 1.21.1 的现代写法：不使用已废弃的
- * {@code @EventBusSubscriber(bus = Bus.MOD)}，
- * 而是通过主类构造函数传入的 {@link IEventBus} 直接用
- * {@code modEventBus.addListener()} 注册 Mod 总线事件。</p>
+ * <h3>Provider 注册顺序（按优先级）</h3>
+ * <pre>
+ *   65  ItemAbilityHintProvider  [叠加] USE 槽：工具变换（去皮/耕地/铲平等）
+ *   80  MovementHintProvider     [叠加] SHIFT/SPRINT/DROP 槽：蹲下/疾跑/丢出物品
+ *   81  VanillaHintProvider      [终止] USE/ATTACK/MOVE/JUMP/SHIFT 槽：全场景
+ *  100  FallbackHintProvider     [终止] 兜底（通常不触发）
+ * </pre>
  *
- * <p>游戏总线事件（如 {@code RenderGuiEvent}）仍通过
- * {@code @EventBusSubscriber} 注解注册，但无需指定 {@code bus} 参数
- * ——NeoForge 会根据事件是否实现 {@code IModBusEvent} 自动判断。</p>
+ * <h3>手持斧头面对原木时的完整执行流程</h3>
+ * <pre>
+ *  ItemAbilityHintProvider (65, 叠加)  → 追加 [USE: 去皮]            → 链继续
+ *  MovementHintProvider    (80, 叠加)  → 追加 [SHIFT: 蹲下][SPRINT: 疾跑][DROP: 丢出]
+ *                                                                       → 链继续
+ *  VanillaHintProvider     (81, 终止)  → 追加 [ATTACK: 挖掘]          → 链停止
+ *
+ *  HintEngine 按 sortKey 排序后渲染：
+ *    [右键]  去皮       (USE,    priority 0)
+ *    [左键]  挖掘       (ATTACK, priority 0)
+ *    [Shift] 蹲下       (SHIFT,  priority 0)
+ *    [Sprint]疾跑       (SPRINT, priority 0)
+ *    [Q]     丢出物品   (DROP,   priority 0)
+ * </pre>
  */
 public class ShowYourKeysClient {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /**
-     * 由 {@link ShowYourKeys} 构造函数在客户端调用，
-     * 将所有客户端 Mod 总线事件监听器注册到 modEventBus。
-     */
     public static void register(IEventBus modEventBus) {
         modEventBus.addListener(ShowYourKeysClient::onClientSetup);
     }
@@ -34,16 +47,11 @@ public class ShowYourKeysClient {
     private static void onClientSetup(FMLClientSetupEvent event) {
         HintEngine engine = HintEngine.getInstance();
 
-        // 优先级 81：原版规则，覆盖骑乘/游泳/方块/实体/持有物品等场景
+        engine.register(new ItemAbilityHintProvider());
+        engine.register(new MovementHintProvider());
         engine.register(new VanillaHintProvider());
+        engine.register(new FallbackHintProvider());
 
-        // TODO 后续阶段将在此处陆续注册：
-        //   优先级 61-80：ItemAbility 通用推断 Provider
-        //   优先级 31-60：Create、Mekanism 等大型 Mod 的硬编码 Compat Provider
-        //   优先级 11-30：第三方 Mod 通过 API 注册的 Provider
-        //   优先级  1-10：用户/整合包 JSON 配置文件 Provider
-
-        LOGGER.info("[ShowYourKeys] Client setup complete. HintEngine initialized with {} provider(s).",
-                engine.getProviderCount());
+        LOGGER.info("[ShowYourKeys] {} provider(s) registered.", engine.getProviderCount());
     }
 }
