@@ -150,6 +150,7 @@ public class YourProvider implements IKeyHintProvider {
 **用户交互部分**
 
 - [ ] UI 美化与自定义支持
+- [ ] Mod 加载部分的进度条
 
 _更多计划计划中_
 
