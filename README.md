@@ -130,7 +130,7 @@ public class YourProvider implements IKeyHintProvider {
 考虑到社区友好以及各位Mod开发者的头发（但我的头发快无了），我希望从多个方向来进行行为的注册与判断：
 （以下为拥有优先级的获取按键提示的方法，优先级高的方法会覆盖优先级低的方法获取的结果，1为优先级最高）
 
-1. 硬编码软依赖：自己适配某些热门常见模组，如机械动力（Create），Tweakroo等。另外，之后的模组开发者也能够做对我的模组的适配，甚至让热门模组也来主动适配（野心（doge）。
+1. 硬编码软依赖：自己适配某些热门常见模组，如机械动力（Create），Tweakroo等。另外，之后的模组开发者也能够做对我的模组的适配，甚至让热门模组也来主动适配（~~野心~~。
 2. 对于大多数玩法扩展不多的Mod，仍然使用 ItemAbility / ToolAction 以保障适配大部分内容。
 3. 通过反射的方式获取到逻辑或 ID注册名 / 元数据，再进行通用推断
 4. ~~现在AI都这么发达了，为什么不能直接用AI批量适配mod呢（~~
@@ -176,8 +176,8 @@ _更多计划计划中_
 
 ## 相关链接
 
-- [GitHub 仓库](https://github.com/gzxx307/show-your-keys)
-- [问题追踪](https://github.com/gzxx307/show-your-keys/issues)
+- [GitHub 仓库](https://github.com/gzxx307/ShowYourKeys-1.21.1-NeoForge)
+- [问题追踪](https://github.com/gzxx307/ShowYourKeys-1.21.1-NeoForge/issues)
 - [NeoForge 文档](https://docs.neoforged.net/)
 - [Minecraft 官网](https://www.minecraft.net/)
 
@@ -185,12 +185,13 @@ _更多计划计划中_
 
 - [Github 个人主页](https://github.com/gzxx307)
 - [bilibili 个人主页](https://space.bilibili.com/372575779) 
+- 个人博客（暂无）
 
 ## 联系我
 
 关于此Mod有任何问题或建议，欢迎通过以下方式联系：
 
-- GitHub Issues -> [提交问题](https://github.com/your-username/show-your-keys/issues) <-
+- GitHub Issues -> [提交问题](https://github.com/gzxx307/ShowYourKeys-1.21.1-NeoForge/issues) <-
 - 邮箱: [QQ] 3581544162@qq.com / [Gmail] gzxx307@gmail.com
 
 ## 最后
