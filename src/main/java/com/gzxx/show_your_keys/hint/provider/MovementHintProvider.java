@@ -64,7 +64,7 @@ public class MovementHintProvider implements IKeyHintProvider {
             }
         }
 
-        // DROP 槽：丢出物品（骑乘时仍可丢出物品）
+        // DROP 槽：丢出物品
         if (!ctx.heldItem().isEmpty()) {
             hints.add(HintEntry.fromMapping(HintSlot.DROP, mc.options.keyDrop,
                     "hint.show_your_keys.drop_item"));

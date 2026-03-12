@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 按键提示引擎，负责管理所有按键提示提供者并计算当前帧的提示
- * 
- * <p>该类采用单例模式，负责按优先级顺序调用提供者，支持终止模式和叠加模式。</p>
+ * 按键提示引擎，负责管理所有 Provider 并给出所有的按键提示
  */
 public class HintEngine {
 

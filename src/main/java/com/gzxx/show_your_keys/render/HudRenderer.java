@@ -112,16 +112,17 @@ public class HudRenderer {
                 graphics.drawString(font, hint.prefix(), prefixX, lineY, COLOR_PREFIX, false);
             }
 
-            // 绘制按键框背景
+            // 按键框背景
             graphics.fill(keyBoxX, lineY - 1,
                     keyBoxX + keyBoxW, lineY + font.lineHeight + 1,
                     COLOR_KEY_BG);
 
-            // 绘制按键标签（居中）
+            // 按键标签
             int keyTextX = keyBoxX + (keyBoxW - font.width(hint.keyLabel())) / 2;
+            // 居中
             graphics.drawString(font, hint.keyLabel(), keyTextX, lineY, COLOR_KEY_TEXT, false);
 
-            // 绘制动作说明
+            // 动作说明
             graphics.drawString(font, hint.actionLabel(),
                     keyBoxX + keyBoxW + KEY_ACTION_GAP, lineY, COLOR_ACTION, false);
         }
