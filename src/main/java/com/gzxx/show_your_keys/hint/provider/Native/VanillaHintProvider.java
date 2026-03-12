@@ -1,9 +1,9 @@
-package com.gzxx.show_your_keys.hint.provider;
+package com.gzxx.show_your_keys.hint.provider.Native;
 
 import com.gzxx.show_your_keys.hint.HintContext;
 import com.gzxx.show_your_keys.hint.HintEntry;
 import com.gzxx.show_your_keys.hint.HintSlot;
-import com.gzxx.show_your_keys.hint.IKeyHintProvider;
+import com.gzxx.show_your_keys.hint.provider.IKeyHintProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 原版按键提示提供者，优先级为 81
+ * 原版按键提示 Provider，优先级为 81
  * 
  * <p>该 Provider 负责处理原版 Minecraft 的所有按键提示逻辑，包括方块交互、实体交互等。</p>
  */
@@ -52,7 +52,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
 
         // 游泳状态
         if (ctx.player().isSwimming()) {
-            return Optional.of(buildSwimHints());
+            return Optional.of(buildSwimHints(ctx));
         }
 
         // 准心对准方块
@@ -126,6 +126,12 @@ public class VanillaHintProvider implements IKeyHintProvider {
         return blockItem.getBlock().defaultBlockState().canSurvive(level, placePos);
     }
 
+    /**
+     * 获取载具相关提示
+     *
+     * @param ctx 当前上下文
+     * @return 获取到的列表
+     */
     private List<HintEntry> buildVehicleHints(HintContext ctx) {
         List<HintEntry> hints = new ArrayList<>();
         var vehicle = ctx.player().getVehicle();
@@ -146,11 +152,19 @@ public class VanillaHintProvider implements IKeyHintProvider {
         return hints;
     }
 
-    private List<HintEntry> buildSwimHints() {
-        return List.of(
-                HintEntry.of(HintSlot.JUMP,  "Space", "hint.show_your_keys.swim_up"),
-                HintEntry.of(HintSlot.SHIFT, "Shift", "hint.show_your_keys.swim_down")
-        );
+    /**
+     * 构建游泳相关
+     */
+    private List<HintEntry> buildSwimHints(HintContext ctx) {
+        List<HintEntry> hints = new ArrayList<>();
+        Minecraft mc = Minecraft.getInstance();
+
+        hints.add(HintEntry.fromMapping(HintSlot.SHIFT, mc.options.keyShift,
+                "hint.show_your_keys.swim_down"));
+        hints.add(HintEntry.fromMapping(HintSlot.JUMP, mc.options.keyJump,
+                "hint.show_your_keys.swim_up"));
+
+        return hints;
     }
 
     /**

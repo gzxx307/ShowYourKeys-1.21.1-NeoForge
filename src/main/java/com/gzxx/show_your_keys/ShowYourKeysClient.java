@@ -2,9 +2,9 @@ package com.gzxx.show_your_keys;
 
 import com.gzxx.show_your_keys.hint.HintEngine;
 import com.gzxx.show_your_keys.hint.provider.FallbackHintProvider;
-import com.gzxx.show_your_keys.hint.provider.ItemAbilityHintProvider;
-import com.gzxx.show_your_keys.hint.provider.MovementHintProvider;
-import com.gzxx.show_your_keys.hint.provider.VanillaHintProvider;
+import com.gzxx.show_your_keys.hint.provider.Native.ItemAbilityHintProvider;
+import com.gzxx.show_your_keys.hint.provider.Native.MovementHintProvider;
+import com.gzxx.show_your_keys.hint.provider.Native.VanillaHintProvider;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;

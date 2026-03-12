@@ -3,7 +3,6 @@ package com.gzxx.show_your_keys.hint.provider;
 import com.gzxx.show_your_keys.hint.HintContext;
 import com.gzxx.show_your_keys.hint.HintEntry;
 import com.gzxx.show_your_keys.hint.HintSlot;
-import com.gzxx.show_your_keys.hint.IKeyHintProvider;
 import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;

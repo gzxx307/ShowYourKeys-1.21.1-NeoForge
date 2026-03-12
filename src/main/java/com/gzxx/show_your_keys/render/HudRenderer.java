@@ -81,7 +81,7 @@ public class HudRenderer {
                 maxPrefixW = Math.max(maxPrefixW, font.width(hint.prefix()));
             }
             maxKeyTextW = Math.max(maxKeyTextW, font.width(hint.keyLabel()));
-            maxActionW  = Math.max(maxActionW,  font.width(hint.actionLabel()));
+            maxActionW = Math.max(maxActionW, font.width(hint.actionLabel()));
         }
 
         // 按键框总宽

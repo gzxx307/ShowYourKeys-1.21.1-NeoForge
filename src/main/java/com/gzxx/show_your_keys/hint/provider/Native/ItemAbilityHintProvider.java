@@ -1,9 +1,9 @@
-package com.gzxx.show_your_keys.hint.provider;
+package com.gzxx.show_your_keys.hint.provider.Native;
 
 import com.gzxx.show_your_keys.hint.HintContext;
 import com.gzxx.show_your_keys.hint.HintEntry;
 import com.gzxx.show_your_keys.hint.HintSlot;
-import com.gzxx.show_your_keys.hint.IKeyHintProvider;
+import com.gzxx.show_your_keys.hint.provider.IKeyHintProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.context.UseOnContext;

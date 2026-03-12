@@ -1,9 +1,9 @@
-package com.gzxx.show_your_keys.hint.provider;
+package com.gzxx.show_your_keys.hint.provider.Native;
 
 import com.gzxx.show_your_keys.hint.HintContext;
 import com.gzxx.show_your_keys.hint.HintEntry;
 import com.gzxx.show_your_keys.hint.HintSlot;
-import com.gzxx.show_your_keys.hint.IKeyHintProvider;
+import com.gzxx.show_your_keys.hint.provider.IKeyHintProvider;
 import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
@@ -36,8 +36,8 @@ public class MovementHintProvider implements IKeyHintProvider {
         Minecraft mc = Minecraft.getInstance();
         List<HintEntry> hints = new ArrayList<>();
 
-        boolean riding    = ctx.player().isPassenger();
-        boolean swimming  = ctx.player().isSwimming();
+        boolean riding = ctx.player().isPassenger();
+        boolean swimming = ctx.player().isSwimming();
         boolean crouching = ctx.player().isCrouching();
         boolean sprinting = ctx.player().isSprinting();
 

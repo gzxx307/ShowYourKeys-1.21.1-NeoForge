@@ -1,10 +1,13 @@
-package com.gzxx.show_your_keys.hint;
+package com.gzxx.show_your_keys.hint.provider;
+
+import com.gzxx.show_your_keys.hint.HintContext;
+import com.gzxx.show_your_keys.hint.HintEntry;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 按键提示 Provider 接口，所有兼容层均需实现此接口。
+ * 按键提示 Provider 接口，所有 Provider 均需实现此接口。
  */
 public interface IKeyHintProvider {
 

@@ -1,5 +1,6 @@
 package com.gzxx.show_your_keys.hint;
 
+import com.gzxx.show_your_keys.hint.provider.IKeyHintProvider;
 import com.mojang.logging.LogUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
