@@ -26,14 +26,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 原版按键提示提供者，优先级为 81（终止模式）
+ * 原版按键提示提供者，优先级为 81
  * 
  * <p>该 Provider 负责处理原版 Minecraft 的所有按键提示逻辑，包括方块交互、实体交互等。</p>
  */
 public class VanillaHintProvider implements IKeyHintProvider {
 
-    /**
-     * 获取优先级 81
+    // 获取优先级 81
     @Override
     public int getPriority() { return 81; }
 
@@ -155,22 +154,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
     }
 
     /**
-     * 方块场景提示构建。
-     *
-     * <h3>蹲下影响右键语义</h3>
-     * <pre>
-     *  未蹲下：
-     *    告示牌      → [右键: 编辑]
-     *    交互性方块  → [右键: 交互]
-     *    非交互+持方块 → [右键: 放置]
-     *
-     *  蹲下（方块交互被绕过）：
-     *    持方块 → [右键: 放置]
-     *    （交互 / 告示牌编辑均不显示）
-     * </pre>
-     *
-     * <p>注：工具变换提示（去皮/耕地等）由上游的 {@link ItemAbilityHintProvider} 追加，
-     * 本方法只负责「交互/放置」和「挖掘」。</p>
+     * 与方块相关的提示
      */
     private List<HintEntry> buildBlockHints(HintContext ctx, BlockState state) {
         List<HintEntry> hints = new ArrayList<>();
@@ -179,8 +163,6 @@ public class VanillaHintProvider implements IKeyHintProvider {
         Block block = state.getBlock();
         boolean crouching = ctx.player().isCrouching();
         boolean holdingBlock = heldItem instanceof BlockItem;
-
-        // ── 右键提示（交互 与 放置 互斥，由蹲下状态决定）────────────────
 
         if (!crouching) {
             // 未蹲下：方块交互优先
@@ -203,13 +185,13 @@ public class VanillaHintProvider implements IKeyHintProvider {
             }
         }
 
-        // ── 右键：刷怪蛋（与蹲下无关）────────────────────────────────────
+        // 刷怪蛋
         if (heldItem instanceof SpawnEggItem) {
             hints.add(HintEntry.fromMapping(HintSlot.USE, 5, mc.options.keyUse,
                     "hint.show_your_keys.spawn_entity"));
         }
 
-        // ── 左键：挖掘（工具不对时显示红色前缀）─────────────────────────
+        // 挖掘（工具不对时显示红色前缀）
         if (hasCorrectTool(ctx, state)) {
             hints.add(HintEntry.fromMapping(HintSlot.ATTACK, mc.options.keyAttack,
                     "hint.show_your_keys.mine"));

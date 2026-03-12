@@ -7,20 +7,14 @@ import java.util.Map;
  * 按键槽位注册表：将每个逻辑按键映射到一个显示顺序值。
  *
  * <h3>设计目标</h3>
- * <p>HUD 上每一行提示都属于某个槽位。槽位决定该行在屏幕上从上到下的位置，
- * 保证无论哪些 Provider 触发、以何种顺序触发，视觉布局始终一致。</p>
+ * <p>HUD 上每一行提示都属于某个槽位。槽位决定该行在屏幕上从上到下的位置。</p>
  *
- * <h3>工作原理</h3>
- * <pre>
- *  每条 {@link HintEntry} 携带一个 slotId（字符串，如 "use"、"attack"）
- *  和一个 slotPriority（槽内顺序，int）。
+ * <p>每条 {@link HintEntry} 携带一个 slotId（字符串，如 "use"、"attack"）
+ * 和一个 slotPriority（槽内顺序，int）。
+ * <p> HintEngine 收集完所有 Provider 的结果后，按以下 sortKey 排序再渲染：
+ * sortKey = HintSlot.getOrder(slotId) × 1000 + slotPriority</p>
  *
- *  HintEngine 收集完所有 Provider 的结果后，按以下 sortKey 排序再渲染：
- *    sortKey = HintSlot.getOrder(slotId) × 1000 + slotPriority
- *
- *  同一槽位的多条提示（例如右键既可「去皮」又可「交互」）会紧挨着显示，
- *  slotPriority 越小越靠前。
- * </pre>
+ * <p>slotPriority 越小越靠前。</p>
  *
  * <h3>内置槽位（显示顺序从上到下）</h3>
  * <pre>
@@ -34,10 +28,10 @@ import java.util.Map;
  *  SWAP    800  F        切换副手（预留）
  * </pre>
  *
- * <h3>第三方 Mod 扩展</h3>
+ * <h3>如何扩展</h3>
  * <p>调用 {@link #register(String, int)} 可注册自定义槽位：</p>
  * <pre>
- *  HintSlot.register("mymod.wrench", 350);   // 显示在 USE 与 ATTACK 之间
+ *  HintSlot.register("mod_name.mod_action", priority);
  * </pre>
  */
 public final class HintSlot {
@@ -48,7 +42,7 @@ public final class HintSlot {
     public static final String JUMP = "jump";
     // 右键
     public static final String USE = "use";
-    // 键
+    // 左键
     public static final String ATTACK = "attack";
     // Shift
     public static final String SHIFT = "shift";

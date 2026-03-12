@@ -26,7 +26,7 @@ public class ShowYourKeysClient {
     }
 
     /**
-     * 客户端设置事件处理，注册所有按键提示提供者
+     * 客户端设置事件处理，注册所有按键提示 Provider
      * 
      * @param event 客户端设置事件
      */
