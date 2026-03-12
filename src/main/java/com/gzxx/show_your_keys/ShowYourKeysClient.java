@@ -37,6 +37,8 @@ public class ShowYourKeysClient {
         engine.register(new ItemAbilityHintProvider());
         engine.register(new MovementHintProvider());
         engine.register(new VanillaHintProvider());
+
+        // 兜底 Provider
         engine.register(new FallbackHintProvider());
 
         LOGGER.info("[ShowYourKeys] {} provider(s) registered.", engine.getProviderCount());
