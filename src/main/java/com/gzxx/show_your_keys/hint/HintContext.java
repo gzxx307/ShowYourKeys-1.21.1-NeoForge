@@ -12,22 +12,22 @@ import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * 当前帧玩家状态的不可变快照，作为所有 HintProvider 的统一输入。
- *
- * <p>每帧由渲染事件驱动调用 {@link #capture()} 捕获一次，
- * 然后传入 {@link HintEngine#compute(HintContext)} 进行提示计算。</p>
+ * 当前帧玩家状态快照，作为所有提示提供者的统一输入
+ * 
+ * <p>该类每帧捕获一次玩家状态，提供准心目标、手持物品等信息。</p>
  */
 public record HintContext(
+        // 当前玩家实例
         LocalPlayer player,
+        // 玩家主手持有的物品
         ItemStack heldItem,
+        // 准心射线命中结果（可为 null）
         @Nullable HitResult hitResult,
+        // 当前世界
         Level level
 ) {
 
-    /**
-     * 从当前 Minecraft 客户端捕获状态快照。
-     * 若玩家不在游戏内（如在主界面），返回 null。
-     */
+    // 获取玩家与世界状态
     @Nullable
     public static HintContext capture() {
         Minecraft mc = Minecraft.getInstance();
@@ -35,25 +35,22 @@ public record HintContext(
         return new HintContext(
                 mc.player,
                 mc.player.getMainHandItem(),
-                mc.hitResult,           // 原版每帧已计算好的准心射线结果，直接复用
+                mc.hitResult,
                 mc.level
         );
     }
 
-    /** 准心是否对准了一个方块 */
+    // 准心是否对准了一个方块
     public boolean isLookingAtBlock() {
         return hitResult != null && hitResult.getType() == HitResult.Type.BLOCK;
     }
 
-    /** 准心是否对准了一个实体 */
+    // 检查准心是否对准了一个实体
     public boolean isLookingAtEntity() {
         return hitResult != null && hitResult.getType() == HitResult.Type.ENTITY;
     }
 
-    /**
-     * 获取准心指向的方块状态。
-     * 若准心未指向方块，返回 null。
-     */
+    // 获取准心指向的方块状态
     @Nullable
     public BlockState getTargetBlockState() {
         if (hitResult instanceof BlockHitResult bhr) {
@@ -62,19 +59,13 @@ public record HintContext(
         return null;
     }
 
-    /**
-     * 获取原始的 BlockHitResult（包含方块坐标、方向等信息）。
-     * 若准心未指向方块，返回 null。
-     */
+    // 获取方块的基本信息
     @Nullable
     public BlockHitResult getBlockHitResult() {
         return hitResult instanceof BlockHitResult bhr ? bhr : null;
     }
 
-    /**
-     * 获取准心指向的实体。
-     * 若准心未指向实体，返回 null。
-     */
+    // 获取准信指向的实体
     @Nullable
     public Entity getTargetEntity() {
         if (hitResult instanceof EntityHitResult ehr) {

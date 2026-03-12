@@ -26,56 +26,37 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 原版按键提示 Provider（优先级 81，终止模式）。
- *
- * <h3>设计要点</h3>
- *
- * <h4>1. 蹲下状态影响右键语义</h4>
- * <p>原版规则：未蹲下时，右键优先触发方块的「交互」行为（开箱子、开门等）；
- * 蹲下时，方块交互被绕过，转而执行物品的 {@code useOn()}（即放置方块）。
- * 因此同一个右键键位在两种状态下含义不同，不能同时显示两条提示。</p>
- *
- * <h4>2. isInteractiveBlock 的检测层次</h4>
- * <ol>
- *   <li><b>BlockTag</b>：门/活板门/栅栏门/床/按钮，模组添加 Tag 即可兼容。</li>
- *   <li><b>BlockEntity instanceof MenuProvider</b>：覆盖所有基于 BE 的容器方块，
- *       一行代码替代十余个 instanceof，自动兼容模组容器。</li>
- *   <li><b>无 BE 但有 GUI 的原版方块</b>：工作台、铁砧、砂轮、附魔台、锻造台。
- *       数量固定，不因模组增加。</li>
- *   <li><b>无 GUI 但有交互效果的原版方块</b>：拉杆、音符盒、唱片机等，硬编码兜底。</li>
- * </ol>
- *
- * <h4>3. UseAnim 替代 instanceof 检测物品使用方式</h4>
- * <p>弓、弩、三叉戟等持续使用物品通过检查 {@link UseAnim} 识别，
- * 模组物品只需正确设置 UseAnim 即可自动获得提示。</p>
- *
- * <h4>4. 告示牌与可装备物品</h4>
- * <p>告示牌右键显示专属「编辑」提示；
- * 可装备物品（盔甲、鞘翅）在对应槽位空置时显示「穿戴」提示。</p>
+ * 原版按键提示提供者，优先级为 81（终止模式）
+ * 
+ * <p>该 Provider 负责处理原版 Minecraft 的所有按键提示逻辑，包括方块交互、实体交互等。</p>
  */
 public class VanillaHintProvider implements IKeyHintProvider {
 
+    /**
+     * 获取优先级 81
     @Override
     public int getPriority() { return 81; }
 
-    // 终止模式（默认），isAdditive() 返回 false
-
-    // ─────────────────────────────────────────────────────────────────────
-
+    /**
+     * 根据当前上下文生成按键提示
+     * 
+     * @param ctx 当前帧上下文
+     * @return 包含提示列表的 Optional
+     */
     @Override
     public Optional<List<HintEntry>> getHints(HintContext ctx) {
 
-        // ── 1. 骑乘 ──────────────────────────────────────────────────────
+        // 骑乘状态
         if (ctx.player().isPassenger()) {
             return Optional.of(buildVehicleHints(ctx));
         }
 
-        // ── 2. 游泳 ──────────────────────────────────────────────────────
+        // 游泳状态
         if (ctx.player().isSwimming()) {
             return Optional.of(buildSwimHints());
         }
 
-        // ── 3. 准心对准方块 ──────────────────────────────────────────────
+        // 准心对准方块
         if (ctx.isLookingAtBlock()) {
             BlockState state = ctx.getTargetBlockState();
             if (state != null) {
@@ -83,27 +64,26 @@ public class VanillaHintProvider implements IKeyHintProvider {
             }
         }
 
-        // ── 4. 准心对准实体 ──────────────────────────────────────────────
+        // 准心对准实体
         if (ctx.isLookingAtEntity()) {
             return Optional.of(buildEntityHints(ctx));
         }
 
-        // ── 5. 准心对准空气 + 持有物品 ───────────────────────────────────
+        // 准心对准空气且持有物品
         if (!ctx.heldItem().isEmpty()) {
             return buildItemAirHints(ctx);
         }
 
-        // ── 6. 空手对准空气 ───────────────────────────────────────────────
+        // 空手对准空气
         return Optional.of(buildBareHandHints(ctx));
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // 辅助方法
-    // ─────────────────────────────────────────────────────────────────────
-
     /**
-     * 生成攻击提示，蓄力未满时附加红色前缀。
-     * 蓄力值 0.0（刚攻击完）→ 1.0（满），用 0.95 阈值避免浮点闪烁。
+     * 生成攻击提示，考虑蓄力状态
+     * 
+     * @param ctx 当前上下文
+     * @param mc Minecraft 实例
+     * @return 攻击提示条目
      */
     private HintEntry makeAttackHint(HintContext ctx, Minecraft mc) {
         if (ctx.player().getAttackStrengthScale(0f) < 0.95f) {
@@ -116,20 +96,23 @@ public class VanillaHintProvider implements IKeyHintProvider {
         return HintEntry.fromMapping(HintSlot.ATTACK, mc.options.keyAttack, "hint.show_your_keys.attack");
     }
 
-    /** 判断持有物品是否为目标方块的正确挖掘工具。 */
+    /**
+     * 检查手持物品是否为正确挖掘工具
+     * 
+     * @param ctx 当前上下文
+     * @param state 目标方块状态
+     * @return 如果是正确工具返回 true
+     */
     private boolean hasCorrectTool(HintContext ctx, BlockState state) {
         Tool tool = ctx.heldItem().get(DataComponents.TOOL);
         return tool != null && tool.isCorrectForDrops(state);
     }
 
     /**
-     * 判断当前是否可在准心命中面合法放置手持方块。
-     * 检测流程：
-     * <ol>
-     *   <li>手持物必须是 {@link BlockItem}</li>
-     *   <li>放置目标位置必须可替换（空气、草丛等）</li>
-     *   <li>要放置的方块默认状态必须能在目标位置存活（{@code canSurvive}）</li>
-     * </ol>
+     * 检查是否可以在目标位置放置方块
+     * 
+     * @param ctx 当前上下文
+     * @return 如果可以放置返回 true
      */
     private boolean canPlaceAtTarget(HintContext ctx) {
         if (!(ctx.heldItem().getItem() instanceof BlockItem blockItem)) return false;
@@ -143,10 +126,6 @@ public class VanillaHintProvider implements IKeyHintProvider {
         if (!atPlace.canBeReplaced()) return false;
         return blockItem.getBlock().defaultBlockState().canSurvive(level, placePos);
     }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // 场景构建
-    // ─────────────────────────────────────────────────────────────────────
 
     private List<HintEntry> buildVehicleHints(HintContext ctx) {
         List<HintEntry> hints = new ArrayList<>();

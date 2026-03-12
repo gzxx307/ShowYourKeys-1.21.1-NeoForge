@@ -5,78 +5,102 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * 一条按键提示，由四部分组成：
- *
- * <pre>
- *  [前缀]  [按键框]  动作说明
- *   红色   深灰背景   浅灰色
- * </pre>
- *
- * <ul>
- *   <li>{@code slotId}      —— 归属槽位，决定在 HUD 中从上到下的显示位置（见 {@link HintSlot}）</li>
- *   <li>{@code slotPriority}—— 槽内顺序，同槽多条提示时值越小越靠前（默认 0）</li>
- *   <li>{@code prefix}      —— 按键框左侧的红色警告文字，例如「工具错误」「蓄力未完成」（可为 null）</li>
- *   <li>{@code keyLabel}    —— 按键名称，显示在深灰背景框中，例如「[左键]」</li>
- *   <li>{@code actionLabel} —— 动作说明，显示在按键框右侧，例如「挖掘」「放置」</li>
- * </ul>
- *
- * <h3>排序键</h3>
- * <p>{@link #sortKey()} = {@code HintSlot.getOrder(slotId) × 1000 + slotPriority}，
- * 由 {@link HintEngine} 用于将所有 Provider 的结果排序后再渲染，
- * 确保 HUD 布局与 Provider 执行顺序无关。</p>
+ * 单条按键提示类
  */
 public record HintEntry(
+        // 所属的槽位ID
         String slotId,
+        // 优先级
         int slotPriority,
+        // 前缀文字
         @Nullable Component prefix,
+        // 按键名
         Component keyLabel,
+        // 动作说明
         Component actionLabel
 ) {
 
-    /** 用于 HintEngine 排序的综合键：先按槽位顺序，再按槽内优先级。 */
+    /**
+     * 计算排序键，用于 HintEngine 排序
+     * 
+     * @return 排序键 = 槽位顺序 × 1000 + 槽内优先级
+     */
     public int sortKey() {
         return HintSlot.getOrder(slotId) * 1000 + slotPriority;
     }
 
+    // 是否有前缀
     public boolean hasPrefix() {
         return prefix != null;
     }
 
-    // ── 工厂方法：字符串字面量按键标签，无前缀 ───────────────────────────
-
-    /** 基础版：slot + 字面量按键 + 动作，槽内优先级 0。 */
+    /**
+     * 创建基础提示（无前缀，槽内优先级 0）
+     * 
+     * @param slot 槽位ID
+     * @param keyLiteral 按键字面量
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry of(String slot, String keyLiteral, String actionTranslKey) {
         return new HintEntry(slot, 0, null,
                 Component.literal(keyLiteral),
                 Component.translatable(actionTranslKey));
     }
 
-    /** 带槽内优先级版。 */
+    /**
+     * 创建带槽内优先级的提示（无前缀）
+     * 
+     * @param slot 槽位ID
+     * @param priority 槽内优先级
+     * @param keyLiteral 按键字面量
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry of(String slot, int priority, String keyLiteral, String actionTranslKey) {
         return new HintEntry(slot, priority, null,
                 Component.literal(keyLiteral),
                 Component.translatable(actionTranslKey));
     }
 
-    // ── 工厂方法：KeyMapping 按键标签，无前缀 ────────────────────────────
-
-    /** 基础版：slot + KeyMapping + 动作，槽内优先级 0。 */
+    /**
+     * 根据 KeyMapping 创建基础提示（无前缀，槽内优先级 0）
+     * 
+     * @param slot 槽位ID
+     * @param mapping 按键映射
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry fromMapping(String slot, KeyMapping mapping, String actionTranslKey) {
         return new HintEntry(slot, 0, null,
                 mapping.getTranslatedKeyMessage(),
                 Component.translatable(actionTranslKey));
     }
 
-    /** 带槽内优先级版。 */
+    /**
+     * 根据 KeyMapping 创建带槽内优先级的提示（无前缀）
+     * 
+     * @param slot 槽位ID
+     * @param priority 槽内优先级
+     * @param mapping 按键映射
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry fromMapping(String slot, int priority, KeyMapping mapping, String actionTranslKey) {
         return new HintEntry(slot, priority, null,
                 mapping.getTranslatedKeyMessage(),
                 Component.translatable(actionTranslKey));
     }
 
-    // ── 工厂方法：字符串字面量按键标签，带红色前缀 ──────────────────────
-
-    /** 带前缀版：slot + 前缀翻译 key + 字面量按键 + 动作，槽内优先级 0。 */
+    /**
+     * 创建带前缀的提示（槽内优先级 0）
+     * 
+     * @param slot 槽位ID
+     * @param prefixTranslKey 前缀翻译键
+     * @param keyLiteral 按键字面量
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry of(String slot, String prefixTranslKey, String keyLiteral, String actionTranslKey) {
         return new HintEntry(slot, 0,
                 Component.translatable(prefixTranslKey),
@@ -84,7 +108,16 @@ public record HintEntry(
                 Component.translatable(actionTranslKey));
     }
 
-    /** 带前缀 + 优先级版。 */
+    /**
+     * 创建带前缀和槽内优先级的提示
+     * 
+     * @param slot 槽位ID
+     * @param priority 槽内优先级
+     * @param prefixTranslKey 前缀翻译键
+     * @param keyLiteral 按键字面量
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry of(String slot, int priority, String prefixTranslKey, String keyLiteral, String actionTranslKey) {
         return new HintEntry(slot, priority,
                 Component.translatable(prefixTranslKey),
@@ -92,9 +125,15 @@ public record HintEntry(
                 Component.translatable(actionTranslKey));
     }
 
-    // ── 工厂方法：KeyMapping 按键标签，带红色前缀 ────────────────────────
-
-    /** 带前缀版：slot + 前缀翻译 key + KeyMapping + 动作，槽内优先级 0。 */
+    /**
+     * 根据 KeyMapping 创建带前缀的提示（槽内优先级 0）
+     * 
+     * @param slot 槽位ID
+     * @param prefixTranslKey 前缀翻译键
+     * @param mapping 按键映射
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry fromMapping(String slot, String prefixTranslKey, KeyMapping mapping, String actionTranslKey) {
         return new HintEntry(slot, 0,
                 Component.translatable(prefixTranslKey),
@@ -102,7 +141,16 @@ public record HintEntry(
                 Component.translatable(actionTranslKey));
     }
 
-    /** 带前缀 + 优先级版。 */
+    /**
+     * 根据 KeyMapping 创建带前缀和槽内优先级的提示
+     * 
+     * @param slot 槽位ID
+     * @param priority 槽内优先级
+     * @param prefixTranslKey 前缀翻译键
+     * @param mapping 按键映射
+     * @param actionTranslKey 动作翻译键
+     * @return 新的 HintEntry 实例
+     */
     public static HintEntry fromMapping(String slot, int priority, String prefixTranslKey, KeyMapping mapping, String actionTranslKey) {
         return new HintEntry(slot, priority,
                 Component.translatable(prefixTranslKey),

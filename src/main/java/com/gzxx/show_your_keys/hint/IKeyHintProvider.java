@@ -24,7 +24,7 @@ import java.util.Optional;
  * {@link HintEngine} 收集完所有 Provider 的结果后，按 {@link HintEntry#sortKey()}
  * 统一排序再渲染。提示的显示顺序与 Provider 执行顺序无关，始终由槽位决定。</p>
  *
- * <h3>优先级约定（{@link #getPriority()} 越小越先执行）</h3>
+ * <h3>优先级约定</h3>
  * <pre>
  *   1  ~ 10   用户/整合包 JSON 配置文件
  *   11 ~ 30   第三方 Mod 通过 API 主动注册的 Provider
@@ -38,28 +38,25 @@ import java.util.Optional;
 public interface IKeyHintProvider {
 
     /**
-     * 根据当前帧的玩家状态，返回应显示的按键提示列表。
-     *
-     * @param ctx 当前帧玩家状态快照，永远不为 null
-     * @return 包含提示列表的 Optional；或 {@link Optional#empty()} 表示本 Provider 无法处理
+     * 根据当前帧的玩家状态，返回应显示的按键提示列表
+     * 
+     * @param ctx 当前帧玩家状态快照
+     * @return 包含提示列表的 Optional 返回空则表示存在错误
      */
     Optional<List<HintEntry>> getHints(HintContext ctx);
 
-    /**
-     * 此 Provider 的优先级，数字越小越先被调用。默认 100。
-     */
+    // 此 Provider 的优先级，数字越小越先被调用。默认 100。
     default int getPriority() {
         return 100;
     }
 
     /**
-     * 是否为叠加模式。
-     * <ul>
-     *   <li>{@code false}（默认，终止模式）：返回非空结果后责任链停止。</li>
-     *   <li>{@code true}（叠加模式）：返回非空结果后，结果被收集，责任链继续。</li>
-     * </ul>
-     * <p>叠加模式 Provider 应在无贡献时返回 {@link Optional#empty()}，
-     * 而非空列表，避免提前终止链。</p>
+     * 是否为叠加模式
+     * 
+     * <p>终止模式（默认）：提供者返回非空结果后，责任链立即停止。</p>
+     * <p>叠加模式：提供者返回非空结果后，结果被收集，责任链继续。</p>
+     * 
+     * @return 如果是叠加模式返回 true，否则返回 false
      */
     default boolean isAdditive() {
         return false;

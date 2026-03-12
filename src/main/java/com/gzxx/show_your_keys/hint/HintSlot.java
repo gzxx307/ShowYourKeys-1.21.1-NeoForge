@@ -42,42 +42,47 @@ import java.util.Map;
  */
 public final class HintSlot {
 
-    // ── 内置槽位 ID 常量 ────────────────────────────────────────────────
-    public static final String MOVE   = "move";
-    public static final String JUMP   = "jump";
-    public static final String USE    = "use";
+    // WASD
+    public static final String MOVE = "move";
+    // 空格
+    public static final String JUMP = "jump";
+    // 右键
+    public static final String USE = "use";
+    // 键
     public static final String ATTACK = "attack";
-    public static final String SHIFT  = "shift";
+    // Shift
+    public static final String SHIFT = "shift";
+    // 疾跑（双击W）
     public static final String SPRINT = "sprint";
-    public static final String DROP   = "drop";
-    public static final String SWAP   = "swap";
+    // Q
+    public static final String DROP = "drop";
+    // F
+    public static final String SWAP = "swap";
 
-    // ── 顺序注册表 ───────────────────────────────────────────────────────
+    // 注册时附带优先级，为其进行排序
     private static final Map<String, Integer> ORDER = new HashMap<>();
-
+    // 为每个行为添加优先级
     static {
-        ORDER.put(MOVE,   100);
-        ORDER.put(JUMP,   200);
-        ORDER.put(USE,    300);
-        ORDER.put(ATTACK, 400);
-        ORDER.put(SHIFT,  500);
-        ORDER.put(SPRINT, 600);
-        ORDER.put(DROP,   700);
-        ORDER.put(SWAP,   800);
+        ORDER.put(MOVE,100);
+        ORDER.put(JUMP,200);
+        ORDER.put(USE,300);
+        ORDER.put(ATTACK,400);
+        ORDER.put(SHIFT,500);
+        ORDER.put(SPRINT,600);
+        ORDER.put(DROP,700);
+        ORDER.put(SWAP,800);
     }
 
-    /**
-     * 获取槽位的基础显示顺序值。未注册的槽位返回 9999（排在最末）。
-     */
+    //获取槽位的基础显示顺序值。未注册的槽位默认为最低级 9999
     public static int getOrder(String slotId) {
         return ORDER.getOrDefault(slotId, 9999);
     }
 
     /**
-     * 注册自定义槽位。应在 {@code FMLClientSetupEvent} 中调用。
-     *
-     * @param slotId 槽位 ID（建议加 modid 前缀，如 {@code "mymod.wrench"}）
-     * @param order  显示顺序（值越小越靠上）
+     * 注册自定义槽位
+     * 
+     * @param slotId 槽位ID（建议加 modid 前缀）
+     * @param order 显示顺序（值越小越靠上）
      */
     public static void register(String slotId, int order) {
         ORDER.put(slotId, order);
