@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 原版交互按键提示 Provider（内部实现，优先级 81，终止模式）。
+ * 原版交互按键提示 Provider（内部实现，优先级 81）。
  *
  * <p>覆盖原版 Minecraft 的全部交互场景：</p>
  * <ul>

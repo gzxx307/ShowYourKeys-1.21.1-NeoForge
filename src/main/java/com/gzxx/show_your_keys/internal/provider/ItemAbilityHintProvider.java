@@ -18,11 +18,15 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 工具能力按键提示 Provider（内部实现，优先级 65，叠加模式）。
+ * 工具能力按键提示 Provider（内部实现，优先级 65）。
  *
  * <p>遍历 {@link AbilityHintRegistry} 中所有已注册的 {@link ItemAbility}，
  * 通过模拟工具变换（{@code Block.getToolModifiedState()}）检测当前工具对准心方块
  * 是否可执行对应操作，并在 USE 槽显示提示。</p>
+ *
+ * <p>本 Provider 优先级为 65，低于 VanillaHintProvider（81）。
+ * 当检测到可用工具能力时，其 USE 槽条目会覆盖 Vanilla 的交互提示；
+ * 若无可用能力（返回 empty），则 USE 槽由 VanillaHintProvider 正常处理。</p>
  *
  * <p>无需修改此类即可扩展支持的工具能力，只需向
  * {@link com.gzxx.show_your_keys.api.ShowYourKeysAPI#abilities()} 注册映射。</p>
@@ -31,9 +35,6 @@ public class ItemAbilityHintProvider implements IKeyHintProvider {
 
     @Override
     public int getPriority() { return 65; }
-
-    @Override
-    public boolean isAdditive() { return true; }
 
     @Override
     public Optional<List<HintEntry>> getHints(HintContext ctx) {

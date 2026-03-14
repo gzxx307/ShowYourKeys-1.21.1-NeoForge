@@ -11,18 +11,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 移动状态按键提示 Provider（内部实现，优先级 80，叠加模式）。
+ * 移动状态按键提示 Provider（内部实现，优先级 80）。
  *
- * <p>负责处理与玩家运动状态相关的常驻提示：蹲下/起身、疾跑/疾游、丢物品。
- * 使用叠加模式，其结果会与主 Provider（{@link VanillaHintProvider}）的结果合并显示。</p>
+ * <p>负责处理与玩家运动状态相关的常驻提示：蹲下/起身、疾跑/疾游、丢物品。</p>
+ *
+ * <p>本 Provider 仅覆盖 {@code SHIFT}、{@code SPRINT}、{@code DROP} 三个槽，
+ * 与其他 Provider 负责的 {@code USE}、{@code ATTACK} 等槽不冲突。</p>
  */
 public class MovementHintProvider implements IKeyHintProvider {
 
     @Override
     public int getPriority() { return 80; }
-
-    @Override
-    public boolean isAdditive() { return true; }
 
     @Override
     public Optional<List<HintEntry>> getHints(HintContext ctx) {
