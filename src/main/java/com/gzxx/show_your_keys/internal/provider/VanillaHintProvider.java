@@ -1,9 +1,9 @@
-package com.gzxx.show_your_keys.hint.provider.Native;
+package com.gzxx.show_your_keys.internal.provider;
 
-import com.gzxx.show_your_keys.hint.HintContext;
-import com.gzxx.show_your_keys.hint.HintEntry;
-import com.gzxx.show_your_keys.hint.HintSlot;
-import com.gzxx.show_your_keys.hint.provider.IKeyHintProvider;
+import com.gzxx.show_your_keys.api.hint.HintContext;
+import com.gzxx.show_your_keys.api.hint.HintEntry;
+import com.gzxx.show_your_keys.api.hint.HintSlot;
+import com.gzxx.show_your_keys.api.hint.IKeyHintProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -26,36 +26,37 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 原版按键提示 Provider，优先级为 81
- * 
- * <p>该 Provider 负责处理原版 Minecraft 的所有按键提示逻辑，包括方块交互、实体交互等。</p>
+ * 原版交互按键提示 Provider（内部实现，优先级 81，终止模式）。
+ *
+ * <p>覆盖原版 Minecraft 的全部交互场景：</p>
+ * <ul>
+ *   <li>骑乘载具（马/船/矿车）</li>
+ *   <li>游泳状态</li>
+ *   <li>准心对准方块（交互、挖掘、放置）</li>
+ *   <li>准心对准实体（攻击、骑乘、驯服）</li>
+ *   <li>手持物品对准空气（食物、弓弩、盔甲等）</li>
+ *   <li>空手对准空气（兜底攻击提示）</li>
+ * </ul>
  */
 public class VanillaHintProvider implements IKeyHintProvider {
 
-    // 获取优先级 81
     @Override
     public int getPriority() { return 81; }
 
-    /**
-     * 根据当前上下文生成按键提示
-     * 
-     * @param ctx 当前帧上下文
-     * @return 包含提示列表的 Optional
-     */
     @Override
     public Optional<List<HintEntry>> getHints(HintContext ctx) {
 
-        // 骑乘状态
+        // ── 骑乘状态 ────────────────────────────────────────────────────────────
         if (ctx.player().isPassenger()) {
             return Optional.of(buildVehicleHints(ctx));
         }
 
-        // 游泳状态
+        // ── 游泳状态 ────────────────────────────────────────────────────────────
         if (ctx.player().isSwimming()) {
             return Optional.of(buildSwimHints(ctx));
         }
 
-        // 准心对准方块
+        // ── 准心对准方块 ─────────────────────────────────────────────────────────
         if (ctx.isLookingAtBlock()) {
             BlockState state = ctx.getTargetBlockState();
             if (state != null) {
@@ -63,75 +64,22 @@ public class VanillaHintProvider implements IKeyHintProvider {
             }
         }
 
-        // 准心对准实体
+        // ── 准心对准实体 ─────────────────────────────────────────────────────────
         if (ctx.isLookingAtEntity()) {
             return Optional.of(buildEntityHints(ctx));
         }
 
-        // 准心对准空气且持有物品
+        // ── 准心对准空气且手持物品 ───────────────────────────────────────────────
         if (!ctx.heldItem().isEmpty()) {
             return buildItemAirHints(ctx);
         }
 
-        // 空手对准空气
+        // ── 空手对准空气 ─────────────────────────────────────────────────────────
         return Optional.of(buildBareHandHints(ctx));
     }
 
-    /**
-     * 生成攻击提示，考虑蓄力状态
-     * 
-     * @param ctx 当前上下文
-     * @param mc Minecraft 实例
-     * @return 攻击提示条目
-     */
-    private HintEntry makeAttackHint(HintContext ctx, Minecraft mc) {
-        if (ctx.player().getAttackStrengthScale(0f) < 0.95f) {
-            return HintEntry.fromMapping(
-                    HintSlot.ATTACK,
-                    "hint.show_your_keys.prefix.not_charged",
-                    mc.options.keyAttack,
-                    "hint.show_your_keys.attack");
-        }
-        return HintEntry.fromMapping(HintSlot.ATTACK, mc.options.keyAttack, "hint.show_your_keys.attack");
-    }
+    // ── 载具 ──────────────────────────────────────────────────────────────────
 
-    /**
-     * 检查手持物品是否为正确挖掘工具
-     * 
-     * @param ctx 当前上下文
-     * @param state 目标方块状态
-     * @return 如果是正确工具返回 true
-     */
-    private boolean hasCorrectTool(HintContext ctx, BlockState state) {
-        Tool tool = ctx.heldItem().get(DataComponents.TOOL);
-        return tool != null && tool.isCorrectForDrops(state);
-    }
-
-    /**
-     * 检查是否可以在目标位置放置方块
-     * 
-     * @param ctx 当前上下文
-     * @return 如果可以放置返回 true
-     */
-    private boolean canPlaceAtTarget(HintContext ctx) {
-        if (!(ctx.heldItem().getItem() instanceof BlockItem blockItem)) return false;
-        BlockHitResult bhr = ctx.getBlockHitResult();
-        if (bhr == null) return false;
-
-        Level level = ctx.player().level();
-        BlockPos placePos = bhr.getBlockPos().relative(bhr.getDirection());
-        BlockState atPlace = level.getBlockState(placePos);
-
-        if (!atPlace.canBeReplaced()) return false;
-        return blockItem.getBlock().defaultBlockState().canSurvive(level, placePos);
-    }
-
-    /**
-     * 获取载具相关提示
-     *
-     * @param ctx 当前上下文
-     * @return 获取到的列表
-     */
     private List<HintEntry> buildVehicleHints(HintContext ctx) {
         List<HintEntry> hints = new ArrayList<>();
         var vehicle = ctx.player().getVehicle();
@@ -152,24 +100,18 @@ public class VanillaHintProvider implements IKeyHintProvider {
         return hints;
     }
 
-    /**
-     * 构建游泳相关
-     */
+    // ── 游泳 ──────────────────────────────────────────────────────────────────
+
     private List<HintEntry> buildSwimHints(HintContext ctx) {
-        List<HintEntry> hints = new ArrayList<>();
         Minecraft mc = Minecraft.getInstance();
-
-        hints.add(HintEntry.fromMapping(HintSlot.SHIFT, mc.options.keyShift,
-                "hint.show_your_keys.swim_down"));
-        hints.add(HintEntry.fromMapping(HintSlot.JUMP, mc.options.keyJump,
-                "hint.show_your_keys.swim_up"));
-
-        return hints;
+        return List.of(
+                HintEntry.fromMapping(HintSlot.SHIFT, mc.options.keyShift, "hint.show_your_keys.swim_down"),
+                HintEntry.fromMapping(HintSlot.JUMP,  mc.options.keyJump,  "hint.show_your_keys.swim_up")
+        );
     }
 
-    /**
-     * 与方块相关的提示
-     */
+    // ── 方块交互 ──────────────────────────────────────────────────────────────
+
     private List<HintEntry> buildBlockHints(HintContext ctx, BlockState state) {
         List<HintEntry> hints = new ArrayList<>();
         Minecraft mc = Minecraft.getInstance();
@@ -179,9 +121,8 @@ public class VanillaHintProvider implements IKeyHintProvider {
         boolean holdingBlock = heldItem instanceof BlockItem;
 
         if (!crouching) {
-            // 未蹲下：方块交互优先
+            // 未蹲下：方块交互优先于放置
             if (block instanceof SignBlock) {
-                // 告示牌：专属文案
                 hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                         "hint.show_your_keys.edit_sign"));
             } else if (isInteractiveBlock(ctx, state)) {
@@ -205,7 +146,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
                     "hint.show_your_keys.spawn_entity"));
         }
 
-        // 挖掘（工具不对时显示红色前缀）
+        // 挖掘（工具不对时显示警告前缀）
         if (hasCorrectTool(ctx, state)) {
             hints.add(HintEntry.fromMapping(HintSlot.ATTACK, mc.options.keyAttack,
                     "hint.show_your_keys.mine"));
@@ -223,12 +164,10 @@ public class VanillaHintProvider implements IKeyHintProvider {
      *
      * <h3>检测层次</h3>
      * <ol>
-     *   <li>BlockTag：门/活板门/栅栏门/床/按钮。</li>
-     *   <li>BlockEntity instanceof MenuProvider：覆盖所有 BE 容器（箱子、熔炉、桶等）
-     *       及模组容器。{@code BlockBehaviour.getMenuProvider()} 为 protected，
-     *       改用 BE 检测等价替代。</li>
-     *   <li>无 BE 但开 GUI 的原版方块：工作台、铁砧、砂轮、附魔台、锻造台。</li>
-     *   <li>无 GUI 但有交互效果的方块：拉杆、音符盒、唱片机、钟、重生锚、蛋糕。</li>
+     *   <li>BlockTag：门 / 活板门 / 栅栏门 / 床 / 按钮</li>
+     *   <li>BlockEntity instanceof MenuProvider：覆盖所有容器（含模组容器）</li>
+     *   <li>无 BE 但开 GUI 的原版方块：工作台、铁砧、砂轮、附魔台、锻造台</li>
+     *   <li>无 GUI 但有交互效果的方块：拉杆、音符盒、唱片机、钟、重生锚、蛋糕</li>
      * </ol>
      */
     private boolean isInteractiveBlock(HintContext ctx, BlockState state) {
@@ -248,24 +187,22 @@ public class VanillaHintProvider implements IKeyHintProvider {
             if (be instanceof MenuProvider) return true;
         }
 
-        // 层次 3：无 BE 但开 GUI 的原版方块（数量固定，不因模组增加）
-        if (block instanceof CraftingTableBlock
-                || block instanceof AnvilBlock
-                || block instanceof GrindstoneBlock
-                || block instanceof EnchantingTableBlock
+        // 层次 3：无 BE 但开 GUI 的原版方块
+        if (block instanceof CraftingTableBlock || block instanceof AnvilBlock
+                || block instanceof GrindstoneBlock || block instanceof EnchantingTableBlock
                 || state.is(Blocks.SMITHING_TABLE)) {
             return true;
         }
 
         // 层次 4：无 GUI 但有交互效果的原版方块
-        // TODO：后续可用自定义 BlockTag #show_your_keys:interactable 替代此硬编码
-        return block instanceof LeverBlock
-                || block instanceof NoteBlock
+        // TODO: 后续可用自定义 BlockTag #show_your_keys:interactable 替代此硬编码
+        return block instanceof LeverBlock || block instanceof NoteBlock
                 || block instanceof JukeboxBlock
-                || state.is(Blocks.BELL)
-                || state.is(Blocks.RESPAWN_ANCHOR)
+                || state.is(Blocks.BELL) || state.is(Blocks.RESPAWN_ANCHOR)
                 || state.is(Blocks.CAKE);
     }
+
+    // ── 实体交互 ──────────────────────────────────────────────────────────────
 
     private List<HintEntry> buildEntityHints(HintContext ctx) {
         List<HintEntry> hints = new ArrayList<>();
@@ -288,17 +225,17 @@ public class VanillaHintProvider implements IKeyHintProvider {
         return hints;
     }
 
+    // ── 手持物品对空气 ────────────────────────────────────────────────────────
+
     /**
      * 准心对准空气时，根据持有物品类型给出提示。
      *
      * <h3>识别策略</h3>
      * <ul>
-     *   <li><b>可装备物品</b>（盔甲、鞘翅）：{@code Equipable} 接口检测，
-     *       槽位空置时显示「穿戴」。</li>
-     *   <li><b>食物</b>：{@code DataComponents.FOOD} 覆盖所有模组食物。</li>
-     *   <li><b>持续使用物品</b>（弓、弩、三叉戟等）：{@link UseAnim} 检测，
-     *       模组物品只需设置正确的 UseAnim 即可自动适配。</li>
-     *   <li><b>投掷物</b>：暂无通用接口，保留显式实例检测。</li>
+     *   <li><b>可装备物品</b>（盔甲、鞘翅）：{@code Equipable} 接口</li>
+     *   <li><b>食物</b>：{@code DataComponents.FOOD}（覆盖所有模组食物）</li>
+     *   <li><b>持续使用物品</b>（弓、弩、三叉戟等）：{@link UseAnim} 检测</li>
+     *   <li><b>投掷物</b>：暂无通用接口，保留显式实例检测</li>
      * </ul>
      */
     private Optional<List<HintEntry>> buildItemAirHints(HintContext ctx) {
@@ -315,11 +252,8 @@ public class VanillaHintProvider implements IKeyHintProvider {
         // 可装备物品（盔甲、鞘翅等实现 Equipable 的物品）
         if (item instanceof Equipable equipable) {
             EquipmentSlot slot = equipable.getEquipmentSlot();
-            // 只对玩家装备槽（头/胸/腿/脚）显示穿戴提示
-            boolean isArmorSlot = slot == EquipmentSlot.HEAD
-                    || slot == EquipmentSlot.CHEST
-                    || slot == EquipmentSlot.LEGS
-                    || slot == EquipmentSlot.FEET;
+            boolean isArmorSlot = slot == EquipmentSlot.HEAD || slot == EquipmentSlot.CHEST
+                    || slot == EquipmentSlot.LEGS || slot == EquipmentSlot.FEET;
             if (isArmorSlot && ctx.player().getItemBySlot(slot).isEmpty()) {
                 hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                         "hint.show_your_keys.equip"));
@@ -359,7 +293,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
                 return Optional.of(hints);
             }
             case BLOCK -> {
-                // 盾牌：持续举盾同时仍可攻击
+                // 盾牌：举盾同时仍可攻击
                 hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                         "hint.show_your_keys.block_shield"));
                 hints.add(makeAttackHint(ctx, mc));
@@ -379,7 +313,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
         }
 
         // 投掷物：1.21.1 无通用接口，保留显式实例检测
-        // TODO：等待 NeoForge ProjectileItem 接口
+        // TODO: 等待 NeoForge ProjectileItem 接口
         if (item == Items.EGG || item == Items.SNOWBALL || item == Items.ENDER_PEARL
                 || item == Items.EXPERIENCE_BOTTLE || item == Items.SPLASH_POTION
                 || item == Items.LINGERING_POTION) {
@@ -388,13 +322,49 @@ public class VanillaHintProvider implements IKeyHintProvider {
             return Optional.of(hints);
         }
 
-        // 通用工具/武器：仅显示攻击
+        // 通用工具 / 武器：仅显示攻击
         hints.add(makeAttackHint(ctx, mc));
         return Optional.of(hints);
     }
 
+    // ── 空手对空气 ────────────────────────────────────────────────────────────
+
     private List<HintEntry> buildBareHandHints(HintContext ctx) {
-        Minecraft mc = Minecraft.getInstance();
-        return List.of(makeAttackHint(ctx, mc));
+        return List.of(makeAttackHint(ctx, Minecraft.getInstance()));
+    }
+
+    // ── 工具方法 ──────────────────────────────────────────────────────────────
+
+    /**
+     * 生成攻击提示，若蓄力未完成则附加警告前缀。
+     */
+    private HintEntry makeAttackHint(HintContext ctx, Minecraft mc) {
+        if (ctx.player().getAttackStrengthScale(0f) < 0.95f) {
+            return HintEntry.fromMapping(HintSlot.ATTACK,
+                    "hint.show_your_keys.prefix.not_charged",
+                    mc.options.keyAttack, "hint.show_your_keys.attack");
+        }
+        return HintEntry.fromMapping(HintSlot.ATTACK, mc.options.keyAttack,
+                "hint.show_your_keys.attack");
+    }
+
+    /** 检查手持物品是否为目标方块的正确挖掘工具 */
+    private boolean hasCorrectTool(HintContext ctx, BlockState state) {
+        Tool tool = ctx.heldItem().get(DataComponents.TOOL);
+        return tool != null && tool.isCorrectForDrops(state);
+    }
+
+    /** 检查是否可以在准心方块的相邻位置放置手持方块物品 */
+    private boolean canPlaceAtTarget(HintContext ctx) {
+        if (!(ctx.heldItem().getItem() instanceof BlockItem blockItem)) return false;
+        BlockHitResult bhr = ctx.getBlockHitResult();
+        if (bhr == null) return false;
+
+        Level level = ctx.player().level();
+        BlockPos placePos = bhr.getBlockPos().relative(bhr.getDirection());
+        BlockState atPlace = level.getBlockState(placePos);
+
+        if (!atPlace.canBeReplaced()) return false;
+        return blockItem.getBlock().defaultBlockState().canSurvive(level, placePos);
     }
 }

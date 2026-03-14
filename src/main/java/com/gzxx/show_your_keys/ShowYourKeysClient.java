@@ -1,46 +1,51 @@
 package com.gzxx.show_your_keys;
 
-import com.gzxx.show_your_keys.hint.HintEngine;
-import com.gzxx.show_your_keys.hint.provider.FallbackHintProvider;
-import com.gzxx.show_your_keys.hint.provider.Native.ItemAbilityHintProvider;
-import com.gzxx.show_your_keys.hint.provider.Native.MovementHintProvider;
-import com.gzxx.show_your_keys.hint.provider.Native.VanillaHintProvider;
+import com.gzxx.show_your_keys.api.ShowYourKeysAPI;
+import com.gzxx.show_your_keys.internal.provider.FallbackHintProvider;
+import com.gzxx.show_your_keys.internal.provider.ItemAbilityHintProvider;
+import com.gzxx.show_your_keys.internal.provider.MovementHintProvider;
+import com.gzxx.show_your_keys.internal.provider.VanillaHintProvider;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import org.slf4j.Logger;
 
-
+/**
+ * Show Your Keys 客户端初始化入口。
+ *
+ * <p>负责在 {@link FMLClientSetupEvent} 中注册所有内置 Provider。
+ * 外部 Mod 同样应在 {@code FMLClientSetupEvent} 中通过
+ * {@link ShowYourKeysAPI} 完成注册，以确保时序正确。</p>
+ */
 public class ShowYourKeysClient {
 
-    // 获取到日志系统
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /**
-     * 注册客户端事件监听器
-     * 
-     * @param modEventBus Mod 事件总线
-     */
     public static void register(IEventBus modEventBus) {
         modEventBus.addListener(ShowYourKeysClient::onClientSetup);
     }
 
-    /**
-     * 客户端设置事件处理，注册所有按键提示 Provider
-     * 
-     * @param event 客户端设置事件
-     */
     private static void onClientSetup(FMLClientSetupEvent event) {
-        HintEngine engine = HintEngine.getInstance();
+        registerBuiltinProviders();
+        LOGGER.info("[ShowYourKeys] Client setup complete. {} provider(s) registered.",
+                ShowYourKeysAPI.providers().getCount());
+    }
 
-        // 按优先级顺序获取 Provider
-        engine.register(new ItemAbilityHintProvider());
-        engine.register(new MovementHintProvider());
-        engine.register(new VanillaHintProvider());
-
-        // 兜底 Provider
-        engine.register(new FallbackHintProvider());
-
-        LOGGER.info("[ShowYourKeys] {} provider(s) registered.", engine.getProviderCount());
+    /**
+     * 注册所有内置 Provider。
+     *
+     * <p>优先级从低到高排列（数字越小优先级越高）：</p>
+     * <pre>
+     *  65  ItemAbilityHintProvider  叠加  工具能力（去皮、耕地…）
+     *  80  MovementHintProvider     叠加  移动状态（蹲下、疾跑…）
+     *  81  VanillaHintProvider      终止  原版交互（方块/实体/物品）
+     * 100  FallbackHintProvider     终止  兜底（始终有内容）
+     * </pre>
+     */
+    private static void registerBuiltinProviders() {
+        ShowYourKeysAPI.providers().register(new ItemAbilityHintProvider());
+        ShowYourKeysAPI.providers().register(new MovementHintProvider());
+        ShowYourKeysAPI.providers().register(new VanillaHintProvider());
+        ShowYourKeysAPI.providers().register(new FallbackHintProvider());
     }
 }

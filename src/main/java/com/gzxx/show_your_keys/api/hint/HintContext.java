@@ -1,4 +1,4 @@
-package com.gzxx.show_your_keys.hint;
+package com.gzxx.show_your_keys.api.hint;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -12,22 +12,27 @@ import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * 当前帧玩家状态快照，作为所有提示提供者的统一输入
- * 
- * <p>该类每帧捕获一次玩家状态，提供准心目标、手持物品等信息。</p>
+ * 当前帧玩家状态快照
+ *
+ * @param player    当前玩家实例
+ * @param heldItem  玩家主手持有的物品
+ * @param hitResult 准心射线命中结果（可为 {@code null}）
+ * @param level     当前世界
  */
 public record HintContext(
-        // 当前玩家实例
         LocalPlayer player,
-        // 玩家主手持有的物品
         ItemStack heldItem,
-        // 准心射线命中结果（可为 null）
         @Nullable HitResult hitResult,
-        // 当前世界
         Level level
 ) {
 
-    // 获取玩家与世界状态
+    // ── 采集 ─────────────────────────────────────────────────────────────────
+
+    /**
+     * 采集当前帧快照。
+     *
+     * @return 快照，若玩家或世界为空则返回 null
+     */
     @Nullable
     public static HintContext capture() {
         Minecraft mc = Minecraft.getInstance();
@@ -40,17 +45,23 @@ public record HintContext(
         );
     }
 
-    // 准心是否对准了一个方块
+    // ── 准心查询 ─────────────────────────────────────────────────────────────
+
+    /** 准心是否对准了一个方块 */
     public boolean isLookingAtBlock() {
         return hitResult != null && hitResult.getType() == HitResult.Type.BLOCK;
     }
 
-    // 检查准心是否对准了一个实体
+    /** 准心是否对准了一个实体 */
     public boolean isLookingAtEntity() {
         return hitResult != null && hitResult.getType() == HitResult.Type.ENTITY;
     }
 
-    // 获取准心指向的方块状态
+    /**
+     * 获取准心指向的方块状态。
+     *
+     * @return 方块状态，若未对准方块则返回 {@code null}
+     */
     @Nullable
     public BlockState getTargetBlockState() {
         if (hitResult instanceof BlockHitResult bhr) {
@@ -59,13 +70,21 @@ public record HintContext(
         return null;
     }
 
-    // 获取方块的基本信息
+    /**
+     * 获取方块命中结果（包含命中面、命中坐标等信息）。
+     *
+     * @return 方块命中结果，若未对准方块则返回 {@code null}
+     */
     @Nullable
     public BlockHitResult getBlockHitResult() {
         return hitResult instanceof BlockHitResult bhr ? bhr : null;
     }
 
-    // 获取准信指向的实体
+    /**
+     * 获取准心指向的实体。
+     *
+     * @return 目标实体，若未对准实体则返回 {@code null}
+     */
     @Nullable
     public Entity getTargetEntity() {
         if (hitResult instanceof EntityHitResult ehr) {
