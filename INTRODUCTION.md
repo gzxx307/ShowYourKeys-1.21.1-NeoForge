@@ -15,7 +15,7 @@
     - [方式 B：注册 ItemAbility 映射（工具扩展 Mod 专用）](#方式-b注册-itemability-映射工具扩展-mod-专用)
     - [方式 C：注册自定义槽位](#方式-c注册自定义槽位)
 5. [HintEntry 工厂方法速查](#5-hintentry-工厂方法速查)
-6. [责任链机制与优先级](#6-责任链机制与优先级)
+6. [Slot 级别优先级机制](#6-slot-级别优先级机制)
 7. [HintContext 速查](#7-hintcontext-速查)
 8. [HintSlot 内置槽位速查](#8-hintslot-内置槽位速查)
 9. [多语言适配](#9-多语言适配)
@@ -47,6 +47,7 @@ com.gzxx.show_your_keys/
     │   ├── VanillaHintProvider.java
     │   ├── MovementHintProvider.java
     │   ├── ItemAbilityHintProvider.java
+    │   ├── RedstoneHintProvider.java
     │   └── FallbackHintProvider.java
     └── render/HudRenderer.java
 ```
@@ -59,8 +60,8 @@ com.gzxx.show_your_keys/
 
 ### Provider（提示提供者）
 
-Provider 是按键提示的生产者。每帧，引擎按优先级顺序调用所有已注册的 Provider，
-收集它们返回的 `HintEntry` 列表，最终交给渲染器显示在 HUD 上。
+Provider 是按键提示的生产者。每帧，引擎调用所有已注册的 Provider，
+按 **Slot 级别优先级竞争** 规则计算最终结果，交给渲染器显示在 HUD 上。
 
 ### HintContext（帧快照）
 
@@ -122,20 +123,13 @@ import com.gzxx.show_your_keys.api.hint.*;
 public class MyMachineHintProvider implements IKeyHintProvider {
 
     /**
-     * 优先级：数值越小越先执行。
-     * 如果你的 Provider 是"终止模式"，需要比 VanillaHintProvider(81) 更高优先级，
-     * 则设置为 80 以下的值。
-     * 如果是"叠加模式"（追加提示），任何值均可，通常 65~79。
+     * 优先级：数值越小优先级越高。
+     * 对于你返回条目所在的 Slot，优先级高于 VanillaHintProvider(81) 的 Provider
+     * 会覆盖该 Slot 上的原版提示。
+     * 不同 Slot 之间独立竞争，不会互相影响。
      */
     @Override
     public int getPriority() { return 75; }
-
-    /**
-     * 叠加模式：返回结果后，责任链继续向下。
-     * 终止模式（默认 false）：返回结果后，责任链停止。
-     */
-    @Override
-    public boolean isAdditive() { return false; }
 
     @Override
     public Optional<List<HintEntry>> getHints(HintContext ctx) {
@@ -237,33 +231,55 @@ hints.add(HintEntry.fromMapping("mymod.charge", mc.options.keyAttack, "mymod.hin
 
 ---
 
-## 6. 责任链机制与优先级
+## 6. Slot 级别优先级机制
 
-引擎按 `priority` 从小到大遍历所有 Provider：
+引擎调用所有 Provider，对 **每个 Slot 独立进行优先级竞争**：
 
 ```
-priority=65  ItemAbilityHintProvider  叠加模式  ─┐
-priority=80  MovementHintProvider     叠加模式  ─┤ 结果合并
-priority=81  VanillaHintProvider      终止模式  ─┘→ 停止
-priority=100 FallbackHintProvider     终止模式  （上游都为 empty 时才执行）
+对于某个具体场景（如准心对准中继器，未蹲下）：
+
+Provider               priority   返回的 Slot
+─────────────────────────────────────────────────
+ItemAbilityHintProvider   65      （无适用能力，返回 empty）
+RedstoneHintProvider      79      USE, ATTACK       ← USE/ATTACK 槽获胜
+MovementHintProvider      80      SHIFT, SPRINT, DROP ← 这三个槽无竞争，直接获胜
+VanillaHintProvider       81      USE, ATTACK       ← 被 79 覆盖，这两槽被忽略
+FallbackHintProvider     100      USE, ATTACK       ← 被 79 覆盖，忽略
+
+最终 HUD：
+  [右键] 切换挡位      ← RedstoneHintProvider (79) 的 USE
+  [左键] 挖掘          ← RedstoneHintProvider (79) 的 ATTACK
+  [Shift] 蹲下         ← MovementHintProvider (80) 的 SHIFT
+  [Ctrl] 疾跑          ← MovementHintProvider (80) 的 SPRINT
 ```
 
-**终止模式（`isAdditive()=false`，默认）**：
-- Provider 返回非空列表 → 引擎将此结果（含之前叠加的结果）作为最终结果，停止遍历
-- Provider 返回 `Optional.empty()` → 引擎继续调用下一个 Provider
+**核心规则**：
 
-**叠加模式（`isAdditive()=true`）**：
-- Provider 返回非空列表 → 结果被收集，引擎继续调用下一个 Provider
-- Provider 返回 `Optional.empty()` → 什么都不收集，继续
+> 对于每个 Slot，只有 `priority` 数值最小（优先级最高）的 Provider 所返回的条目会显示。
+> 同一 Slot 上其他 Provider 的条目一律忽略。
+> **不同 Slot 之间完全独立**，一个 Slot 被覆盖不影响其他 Slot。
 
-**常见用法**：
+**返回 `Optional.empty()` 的含义**：
 
-| 场景 | 推荐模式 | priority |
+Provider 对当前帧放弃所有 Slot 的竞争，不影响其他 Provider 对任何 Slot 的处理。
+
+**内置 Provider 覆盖的 Slot 一览**：
+
+| Provider | priority | 主要覆盖的 Slot | 备注 |
+|---|---|---|---|
+| `ItemAbilityHintProvider` | 65 | USE | 无可用工具能力时返回 empty |
+| `RedstoneHintProvider` | 79 | USE, ATTACK | 非红石元件时返回 empty |
+| `MovementHintProvider` | 80 | SHIFT, SPRINT, DROP | 骑乘/游泳时部分 Slot 不返回 |
+| `VanillaHintProvider` | 81 | USE, ATTACK, MOVE, JUMP, SHIFT | 通用原版逻辑 |
+| `FallbackHintProvider` | 100 | USE, ATTACK | 兜底，无其他 Provider 时生效 |
+
+**常见用法参考**：
+
+| 场景 | 建议 priority | 说明 |
 |---|---|---|
-| 完全替代原版提示（自定义机器） | 终止，priority < 81 | 70~80 |
-| 在原版提示基础上追加额外行 | 叠加，priority < 80 | 65~79 |
-| 状态性提示（始终显示） | 叠加，任意 | 65~79 |
-| 完全替换所有提示 | 终止，priority < 65 | < 65 |
+| 覆盖特定方块的 USE 和 ATTACK 槽 | 70 ~ 80 | 低于 VanillaHintProvider(81) 即可 |
+| 追加始终显示的状态提示（新 Slot） | 任意 | 使用内置 Provider 未覆盖的 Slot ID |
+| 覆盖所有场景下的所有 Slot | < 65 | 低于所有内置 Provider |
 
 ---
 
@@ -361,7 +377,9 @@ import java.util.Optional;
 
 public class MyCreateHintProvider implements IKeyHintProvider {
 
-    // 优先级 79，终止模式：在 VanillaHintProvider(81) 之前触发，完全替换其结果
+    // priority=79：低于 VanillaHintProvider(81)。
+    // 本 Provider 返回 USE 和 ATTACK 条目时，这两个 Slot 上的原版提示会被忽略。
+    // MovementHintProvider(80) 负责的 SHIFT/SPRINT/DROP 槽不受任何影响。
     @Override
     public int getPriority() { return 79; }
 
@@ -386,7 +404,7 @@ public class MyCreateHintProvider implements IKeyHintProvider {
         hints.add(HintEntry.fromMapping(
                 HintSlot.USE,
                 mc.options.keyUse,
-                "mymod.hint.press_process"   // lang: "Press"
+                "mymod.hint.press_process"   // lang: "Press" / "冲压"
         ));
         hints.add(HintEntry.fromMapping(
                 HintSlot.ATTACK,
@@ -426,13 +444,12 @@ modEventBus.addListener((FMLClientSetupEvent event) -> {
 A：按以下顺序检查：
 1. 注册是否在 `FMLClientSetupEvent` 中进行？（不能在静态块或构造函数中）
 2. `getHints()` 是否在满足条件时返回了非空列表？（调试时加日志确认是否被调用）
-3. 优先级是否被其他 Provider 的终止模式拦截？（尝试降低 priority 值）
-4. `Optional.empty()` 和 `Optional.of(emptyList)` 是两回事——后者会触发终止！
+3. 是否有更高优先级（数值更小）的 Provider 也为同一 Slot 返回了条目？（查看第 6 节）
+4. `Optional.empty()` 和 `Optional.of(emptyList)` 是两回事——后者相当于"宣告参与竞争但没有条目"，在极少数情况下可能产生预期外的结果，请始终用 `Optional.empty()` 表示弃权。
 
-**Q：如何在原版提示基础上追加额外行，而不是替换？**
+**Q：如何在某个 Slot 上与原版提示共存（而非覆盖）？**
 
-A：让你的 Provider 返回 `isAdditive() = true`，并设置 `priority < 81`。
-引擎会先收集你的结果，再继续调用 `VanillaHintProvider`，两者合并显示。
+A：让你的条目放在原版 Provider 未覆盖的 **其他 Slot** 上，或者使用比 `VanillaHintProvider`（81）更大的 `priority` 值（如 90），这样只有当 Vanilla 不为该 Slot 返回内容时你的条目才会显示。
 
 **Q：如何在提示前加红色警告文字（如"无能量"）？**
 
@@ -449,20 +466,21 @@ HintEntry.fromMapping(
 
 **Q：`Optional.empty()` 和返回空列表 `Optional.of(List.of())` 有什么区别？**
 
-A：有根本区别。
-- `Optional.empty()` → 本 Provider 没有结果，责任链**继续**
-- `Optional.of(List.of())` → 本 Provider 有结果（只是空列表），若为终止模式则**停止**链
+A：有实质区别。
+- `Optional.empty()` → 本 Provider 对当前帧完全弃权，所有 Slot 的竞争与本 Provider 无关。
+- `Optional.of(List.of())` → 本 Provider 宣称"参与竞争"但不提供任何条目。若优先级最高却返回空列表，那么该场景下所有 Slot 都不会有任何提示显示。
 
-通常应返回 `Optional.empty()` 而非空列表。
+几乎任何情况下都应该使用 `Optional.empty()` 表示"本 Provider 无适用提示"。
 
-**Q：我能修改内置 Provider 的行为吗（如让它不显示攻击提示）？**
+**Q：我能压制内置 Provider 对某个 Slot 的提示吗？**
 
-A：不建议直接修改内置 Provider。推荐做法是注册一个更高优先级的终止 Provider，
-在你关心的条件下返回自定义结果，其他情况返回 `Optional.empty()` 让内置 Provider 处理。
+A：可以。只需注册一个 `priority` 数值小于目标内置 Provider 的自定义 Provider，
+在你想接管的条件下返回该 Slot 的条目即可。其余条件返回 `Optional.empty()`，
+让内置 Provider 正常处理。
 
 **Q：我的 Provider 抛出了异常会怎样？**
 
-A：引擎会捕获异常并打印 WARN 日志，跳过该 Provider，继续执行后续 Provider。
+A：引擎会捕获异常并打印 WARN 日志，跳过该 Provider，继续处理后续 Provider。
 不会导致游戏崩溃，但你的提示不会显示，请检查日志。
 
 ---
