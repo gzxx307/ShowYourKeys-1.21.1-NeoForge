@@ -50,5 +50,8 @@
 
   "_comment_prefix": "── Warning prefixes ──",
   "hint.show_your_keys.prefix.wrong_tool":  "Wrong Tool",
-  "hint.show_your_keys.prefix.not_charged": "Not Charged"
+  "hint.show_your_keys.prefix.not_charged": "Not Charged",
+
+  "hint.show_your_keys.repeater_delay":  "Set Delay",
+  "hint.show_your_keys.comparator_mode": "Switch Mode"
 }

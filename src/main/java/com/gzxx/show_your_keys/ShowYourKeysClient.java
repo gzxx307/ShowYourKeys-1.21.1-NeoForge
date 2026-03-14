@@ -1,10 +1,7 @@
 package com.gzxx.show_your_keys;
 
 import com.gzxx.show_your_keys.api.ShowYourKeysAPI;
-import com.gzxx.show_your_keys.internal.provider.FallbackHintProvider;
-import com.gzxx.show_your_keys.internal.provider.ItemAbilityHintProvider;
-import com.gzxx.show_your_keys.internal.provider.MovementHintProvider;
-import com.gzxx.show_your_keys.internal.provider.VanillaHintProvider;
+import com.gzxx.show_your_keys.internal.provider.*;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
@@ -47,5 +44,6 @@ public class ShowYourKeysClient {
         ShowYourKeysAPI.providers().register(new MovementHintProvider());
         ShowYourKeysAPI.providers().register(new VanillaHintProvider());
         ShowYourKeysAPI.providers().register(new FallbackHintProvider());
+        ShowYourKeysAPI.providers().register(new RedstoneHintProvider());
     }
 }

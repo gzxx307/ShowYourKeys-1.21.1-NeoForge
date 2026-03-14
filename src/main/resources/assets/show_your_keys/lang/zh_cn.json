@@ -50,5 +50,8 @@
 
   "_comment_prefix": "── 警告前缀 ──",
   "hint.show_your_keys.prefix.wrong_tool":  "工具错误",
-  "hint.show_your_keys.prefix.not_charged": "蓄力未完成"
+  "hint.show_your_keys.prefix.not_charged": "蓄力未完成",
+
+  "hint.show_your_keys.repeater_delay":  "切换挡位",
+  "hint.show_your_keys.comparator_mode": "切换模式"
 }
