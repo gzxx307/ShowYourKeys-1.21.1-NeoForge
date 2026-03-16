@@ -19,6 +19,9 @@
   "hint.show_your_keys.use_spyglass":   "Zoom",
   "hint.show_your_keys.toot_horn":      "Toot",
   "hint.show_your_keys.equip":          "Equip",
+  "hint.show_your_keys.shear":          "Shear",
+  "hint.show_your_keys.place_liquid":   "Place Liquid",
+  "hint.show_your_keys.scoop_liquid":   "Scoop Liquid",
 
   "_comment_vehicle": "── Vehicles ──",
   "hint.show_your_keys.dismount":             "Dismount",

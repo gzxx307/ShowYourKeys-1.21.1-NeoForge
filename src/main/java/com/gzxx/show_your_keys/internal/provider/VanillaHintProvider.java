@@ -10,16 +10,22 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.vehicle.AbstractMinecart;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -156,7 +162,76 @@ public class VanillaHintProvider implements IKeyHintProvider {
                     mc.options.keyAttack, "hint.show_your_keys.mine"));
         }
 
+        // 桶
+        Item heldItemObj = ctx.heldItem().getItem();
+
+        if (heldItemObj instanceof SolidBucketItem) {
+            // 细雪桶
+            hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
+                    "hint.show_your_keys.place_liquid"));
+
+        } else if (heldItemObj instanceof BucketItem bucket) {
+
+            if (bucket.content != Fluids.EMPTY) {
+                // 带有流体
+                hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
+                        "hint.show_your_keys.place_liquid"));
+            } else {
+                // 空桶
+                FluidState fluidState = state.getFluidState();
+
+                boolean canScoop =
+                        // 命中方块本身携带流体（如部分充水方块）
+                        (fluidState.isSource() &&
+                                (fluidState.getType() == Fluids.WATER || fluidState.getType() == Fluids.LAVA))
+                                // 流体感知射线命中了被普通射线穿透的流体源方块
+                                || hasFluidSourceInSight(ctx)
+                                // 细雪方块
+                                || state.is(Blocks.POWDER_SNOW)
+                                // 已满水的炼药锅（level=3）
+                                || (state.getBlock() instanceof LayeredCauldronBlock
+                                && state.getValue(LayeredCauldronBlock.LEVEL) == 3);
+
+                if (canScoop) {
+                    hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
+                            "hint.show_your_keys.scoop_liquid"));
+                }
+            }
+        }
+
         return hints;
+    }
+
+    /**
+     * 通过流体感知射线检测准心方向是否存在可舀取的流体源方块。
+     *
+     * <p>原版 {@code mc.hitResult} 使用 {@link ClipContext.Fluid#NONE}，
+     * 射线遇到水/岩浆会直接穿透并命中背后的实体方块。
+     * 本方法重新发射一条 {@link ClipContext.Fluid#SOURCE_ONLY} 射线，
+     * 专门捕获被普通射线忽略的流体源方块，用于修正空桶"盛装液体"的检测。</p>
+     *
+     * @param ctx 当前帧快照
+     * @return 若准心方向存在水源或熔岩源方块则返回 {@code true}
+     */
+    private boolean hasFluidSourceInSight(HintContext ctx) {
+        Vec3 eye  = ctx.player().getEyePosition();
+        Vec3 look = ctx.player().getViewVector(1.0f);
+        // 交互范围额外加 1 格余量，避免因精度误差遗漏流体方块
+        double reach = ctx.player().blockInteractionRange() + 1.0;
+
+        BlockHitResult fluidHit = ctx.level().clip(new ClipContext(
+                eye,
+                eye.add(look.scale(reach)),
+                ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.SOURCE_ONLY,
+                ctx.player()
+        ));
+
+        if (fluidHit.getType() != HitResult.Type.BLOCK) return false;
+
+        FluidState fs = ctx.level().getBlockState(fluidHit.getBlockPos()).getFluidState();
+        return fs.isSource() &&
+                (fs.getType() == Fluids.WATER || fs.getType() == Fluids.LAVA);
     }
 
     /**
@@ -169,6 +244,11 @@ public class VanillaHintProvider implements IKeyHintProvider {
      *   <li>无 BE 但开 GUI 的原版方块：工作台、铁砧、砂轮、附魔台、锻造台</li>
      *   <li>无 GUI 但有交互效果的方块：拉杆、音符盒、唱片机、钟、重生锚、蛋糕</li>
      * </ol>
+     *
+     * <p><b>注意</b>：本方法不感知持有物品，判断的是方块本身是否具有交互性。
+     * 对于绝大多数情况这是正确的（例如手持任何物品均可开箱子、走过拉杆）。
+     * 若某个方块在特定物品下的"交互"实际无效，应在调用处做物品前置判断，
+     * 而非在此方法内混入物品逻辑。</p>
      */
     private boolean isInteractiveBlock(HintContext ctx, BlockState state) {
         Block block = state.getBlock();
@@ -204,6 +284,13 @@ public class VanillaHintProvider implements IKeyHintProvider {
 
     // ── 实体交互 ──────────────────────────────────────────────────────────────
 
+    /**
+     * 构建实体交互提示。
+     *
+     * <p>修复点：原代码将"剪羊毛"作为独立 if 追加在通用 else 分支之后，
+     * 导致持剪刀面对羊时 USE 槽同时显示"交互"和"剪羊毛"两条提示。
+     * 修复方案：将剪羊毛判断提升为 else-if 分支，与其他特殊实体互斥。</p>
+     */
     private List<HintEntry> buildEntityHints(HintContext ctx) {
         List<HintEntry> hints = new ArrayList<>();
         Minecraft mc = Minecraft.getInstance();
@@ -214,9 +301,16 @@ public class VanillaHintProvider implements IKeyHintProvider {
         if (entity instanceof AbstractHorse horse) {
             hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                     horse.isTamed() ? "hint.show_your_keys.mount" : "hint.show_your_keys.tame"));
+
         } else if (entity instanceof Boat || entity instanceof AbstractMinecart) {
             hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                     "hint.show_your_keys.board_vehicle"));
+
+        } else if (entity instanceof Sheep && ctx.heldItem().getItem() instanceof ShearsItem) {
+            // 持剪刀面对羊
+            hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
+                    "hint.show_your_keys.shear"));
+
         } else {
             hints.add(HintEntry.fromMapping(HintSlot.USE, mc.options.keyUse,
                     "hint.show_your_keys.interact_entity"));

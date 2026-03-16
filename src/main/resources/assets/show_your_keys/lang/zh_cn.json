@@ -19,6 +19,9 @@
   "hint.show_your_keys.use_spyglass":   "使用望远镜",
   "hint.show_your_keys.toot_horn":      "吹奏山羊角",
   "hint.show_your_keys.equip":          "穿戴",
+  "hint.show_your_keys.shear":          "剪羊毛",
+  "hint.show_your_keys.place_liquid":   "放置液体",
+  "hint.show_your_keys.scoop_liquid":   "盛装液体",
 
   "_comment_vehicle": "── 载具 ──",
   "hint.show_your_keys.dismount":             "下马 / 离开",
