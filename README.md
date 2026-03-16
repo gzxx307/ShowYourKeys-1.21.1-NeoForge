@@ -117,7 +117,7 @@ public class YourProvider implements IKeyHintProvider {
 
 与大多数基于 NeoForge 的 Mod 一样，支持多语言需要在 “resources/assets/show_your_keys/lang” 文件夹中进行配置。
 
-> **完整的项目介绍与扩展方式请移步 [introduction](INTRODUCTION.md)**
+> **完整的项目介绍与扩展方式请移步 [introduction](Introduction.md)**
 
 ### 开发过程中的问题
 
@@ -139,7 +139,7 @@ public class YourProvider implements IKeyHintProvider {
 
 **代码部分**
 
-- [ ] 注册系统结构化重构
+- [x] 注册系统结构化重构
 - [ ] 基础反射系统实现
 - [ ] 数据管理与生成脚本
 
