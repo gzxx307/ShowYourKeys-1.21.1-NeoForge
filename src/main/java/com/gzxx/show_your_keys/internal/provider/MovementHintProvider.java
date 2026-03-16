@@ -1,9 +1,10 @@
 package com.gzxx.show_your_keys.internal.provider;
 
+import com.gzxx.show_your_keys.api.hint.Hint;
 import com.gzxx.show_your_keys.api.hint.HintContext;
-import com.gzxx.show_your_keys.api.hint.HintEntry;
 import com.gzxx.show_your_keys.api.hint.HintSlot;
 import com.gzxx.show_your_keys.api.hint.IKeyHintProvider;
+import com.gzxx.show_your_keys.api.hint.SlotContainer;
 import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
@@ -24,9 +25,9 @@ public class MovementHintProvider implements IKeyHintProvider {
     public int getPriority() { return 80; }
 
     @Override
-    public Optional<List<HintEntry>> getHints(HintContext ctx) {
+    public Optional<List<SlotContainer>> getHints(HintContext ctx) {
         Minecraft mc = Minecraft.getInstance();
-        List<HintEntry> hints = new ArrayList<>();
+        List<SlotContainer> result = new ArrayList<>();
 
         boolean riding    = ctx.player().isPassenger();
         boolean swimming  = ctx.player().isSwimming();
@@ -35,30 +36,34 @@ public class MovementHintProvider implements IKeyHintProvider {
 
         // ── SHIFT 槽：蹲下 / 起身（骑乘/游泳由 VanillaHintProvider 处理）──────
         if (!riding && !swimming) {
-            hints.add(HintEntry.fromMapping(HintSlot.SHIFT, mc.options.keyShift,
-                    crouching
-                            ? "hint.show_your_keys.stand_up"
-                            : "hint.show_your_keys.sneak"));
+            result.add(SlotContainer.of(HintSlot.SHIFT,
+                    Hint.fromMapping(mc.options.keyShift,
+                            crouching
+                                    ? "hint.show_your_keys.stand_up"
+                                    : "hint.show_your_keys.sneak")));
         }
 
         // ── SPRINT 槽：疾跑 / 疾游（骑乘时无效）────────────────────────────────
         if (!riding) {
             if (swimming && !sprinting) {
-                hints.add(HintEntry.fromMapping(HintSlot.SPRINT, mc.options.keySprint,
-                        "hint.show_your_keys.sprint_swim"));
+                result.add(SlotContainer.of(HintSlot.SPRINT,
+                        Hint.fromMapping(mc.options.keySprint,
+                                "hint.show_your_keys.sprint_swim")));
             } else if (!swimming && !sprinting && !crouching) {
                 // 蹲下时无法疾跑，不显示
-                hints.add(HintEntry.fromMapping(HintSlot.SPRINT, mc.options.keySprint,
-                        "hint.show_your_keys.sprint"));
+                result.add(SlotContainer.of(HintSlot.SPRINT,
+                        Hint.fromMapping(mc.options.keySprint,
+                                "hint.show_your_keys.sprint")));
             }
         }
 
         // ── DROP 槽：丢出物品────────────────────────────────────────────────────
         if (!ctx.heldItem().isEmpty()) {
-            hints.add(HintEntry.fromMapping(HintSlot.DROP, mc.options.keyDrop,
-                    "hint.show_your_keys.drop_item"));
+            result.add(SlotContainer.of(HintSlot.DROP,
+                    Hint.fromMapping(mc.options.keyDrop,
+                            "hint.show_your_keys.drop_item")));
         }
 
-        return hints.isEmpty() ? Optional.empty() : Optional.of(hints);
+        return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
 }

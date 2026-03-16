@@ -1,8 +1,8 @@
 package com.gzxx.show_your_keys.internal.engine;
 
 import com.gzxx.show_your_keys.api.hint.HintContext;
-import com.gzxx.show_your_keys.api.hint.HintEntry;
 import com.gzxx.show_your_keys.api.hint.IKeyHintProvider;
+import com.gzxx.show_your_keys.api.hint.SlotContainer;
 import com.mojang.logging.LogUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -14,34 +14,37 @@ import java.util.stream.Collectors;
  * 按键提示引擎（内部实现，外部请勿直接使用）。
  *
  * <p>每帧调用所有已注册的 {@link IKeyHintProvider}，按 <b>Slot 级别优先级竞争</b>
- * 规则计算最终提示列表并缓存，供渲染器读取。</p>
+ * 规则计算最终 {@link SlotContainer} 列表并缓存，供渲染器读取。</p>
  *
  * <h3>Slot 级别优先级规则</h3>
- * <p>引擎遍历全部 Provider，对每个 Slot 独立竞争：
- * 只保留该 Slot 上 <b>优先级数值最小</b>（即最高优先级）的 Provider 所提供的条目。
- * 不同 Slot 之间互不干扰，不再有全局的"终止/叠加"概念。</p>
+ * <p>引擎遍历全部 Provider（已按优先级预排序），对每个槽位独立竞争：</p>
+ * <ul>
+ *   <li>某槽位的第一个（优先级最高）返回该槽位 {@link SlotContainer} 的 Provider 获胜</li>
+ *   <li>同优先级的多个 Provider 返回同一槽位时，容器会被合并（仍遵循同键去重规则）</li>
+ *   <li>更低优先级 Provider 对该槽位的容器被完全忽略</li>
+ * </ul>
+ *
+ * <h3>同键去重</h3>
+ * <p>由 {@link SlotContainer#add(com.gzxx.show_your_keys.api.hint.Hint)} 在插入时自动处理，
+ * 引擎无需额外干预。详见 {@link SlotContainer} 的文档。</p>
  *
  * <pre>
  * 示例场景：准心对准中继器，未蹲下
  *
- *  Provider               priority  提供的 Slot
- *  RedstoneHintProvider      79     USE, ATTACK
- *  MovementHintProvider       80     SHIFT, SPRINT, DROP
- *  VanillaHintProvider        81     USE, ATTACK   ← 被 79 覆盖，不显示
- *  FallbackHintProvider      100     USE, ATTACK   ← 被 79 覆盖，不显示
+ *  Provider               priority  返回的槽位
+ *  ──────────────────────────────────────────────────────────────
+ *  RedstoneHintProvider      79     USE, ATTACK        ← 获胜
+ *  MovementHintProvider      80     SHIFT, SPRINT, DROP ← 获胜（无竞争）
+ *  VanillaHintProvider       81     USE, ATTACK        ← 被 79 覆盖，忽略
+ *  FallbackHintProvider     100     USE, ATTACK        ← 被 79 覆盖，忽略
  *
  *  最终：USE=切换挡位, ATTACK=挖掘（来自 79），SHIFT/SPRINT/DROP（来自 80）
  * </pre>
- *
- * <h3>外部 Mod 须知</h3>
- * <p>请使用 {@link com.gzxx.show_your_keys.api.ShowYourKeysAPI#providers()} 注册 Provider，
- * 而非直接调用此类的方法。</p>
  */
 public final class HintEngine {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** 单例 */
     private static final HintEngine INSTANCE = new HintEngine();
 
     public static HintEngine getInstance() {
@@ -49,14 +52,16 @@ public final class HintEngine {
     }
 
     private final List<IKeyHintProvider> providers = new ArrayList<>();
-    private List<HintEntry> currentHints = Collections.emptyList();
+
+    /** 当前帧已计算的 SlotContainer 列表，按槽位 order 升序排列 */
+    private List<SlotContainer> currentSlots = Collections.emptyList();
 
     private HintEngine() {}
 
     // ── Provider 管理 ──────────────────────────────────────────────────────────
 
     /**
-     * 注册 Provider 并按优先级重排。
+     * 注册 Provider 并按优先级重排（数值越小越靠前）。
      *
      * @param provider 要注册的 Provider
      */
@@ -83,37 +88,42 @@ public final class HintEngine {
      */
     public void compute(@Nullable HintContext ctx) {
         if (ctx == null) {
-            currentHints = Collections.emptyList();
+            currentSlots = Collections.emptyList();
             return;
         }
 
-        // slotId -> 赢得该 Slot 的最小 priority 值
+        // slotId → 赢得该槽位的最高 Provider 优先级值（数值越小越优先）
         Map<String, Integer> slotWinnerPriority = new HashMap<>();
-        // slotId -> 该 priority 下的所有 HintEntry
-        Map<String, List<HintEntry>> slotEntries = new LinkedHashMap<>();
+        // slotId → 最终保留的 SlotContainer（可被替换，或与同优先级容器合并）
+        Map<String, SlotContainer> winnerContainers = new LinkedHashMap<>();
 
         for (IKeyHintProvider provider : providers) {
             try {
-                Optional<List<HintEntry>> result = provider.getHints(ctx);
+                Optional<List<SlotContainer>> result = provider.getHints(ctx);
                 if (result.isEmpty()) continue;
 
-                int priority = provider.getPriority();
+                int providerPriority = provider.getPriority();
 
-                for (HintEntry hint : result.get()) {
-                    String slotId = hint.slotId();
+                for (SlotContainer incoming : result.get()) {
+                    if (incoming.isEmpty()) continue; // 忽略空容器
+
+                    String slotId = incoming.getSlotId();
                     int currentBest = slotWinnerPriority.getOrDefault(slotId, Integer.MAX_VALUE);
 
-                    if (priority < currentBest) {
-                        // 此 Provider 优先级更高，替换该 Slot 的所有已收集条目
-                        slotWinnerPriority.put(slotId, priority);
-                        List<HintEntry> list = new ArrayList<>();
-                        list.add(hint);
-                        slotEntries.put(slotId, list);
-                    } else if (priority == currentBest) {
-                        // 同一 Provider 的多条同 Slot 条目（如工具能力），追加
-                        slotEntries.get(slotId).add(hint);
+                    if (providerPriority < currentBest) {
+                        // 更高优先级的 Provider 胜出：完全替换该槽位的容器
+                        // 复制一份以避免外部修改影响引擎状态
+                        SlotContainer copy = new SlotContainer(slotId);
+                        copy.merge(incoming);
+                        winnerContainers.put(slotId, copy);
+                        slotWinnerPriority.put(slotId, providerPriority);
+
+                    } else if (providerPriority == currentBest) {
+                        // 同优先级（同一 Provider 的多个槽位，或极少数情况下两个同优先级 Provider）：
+                        // 合并到已有容器，同键去重由 SlotContainer.add() 自动处理
+                        winnerContainers.get(slotId).merge(incoming);
                     }
-                    // priority > currentBest：更低优先级，忽略
+                    // providerPriority > currentBest：更低优先级，忽略
                 }
 
             } catch (Exception e) {
@@ -122,24 +132,24 @@ public final class HintEngine {
             }
         }
 
-        if (slotEntries.isEmpty()) {
-            currentHints = Collections.emptyList();
+        if (winnerContainers.isEmpty()) {
+            currentSlots = Collections.emptyList();
             return;
         }
 
-        // 展平并按 sortKey 排序（槽位 order × 1000 + 槽内 priority）
-        currentHints = slotEntries.values().stream()
-                .flatMap(Collection::stream)
-                .sorted(Comparator.comparingInt(HintEntry::sortKey))
-                .collect(Collectors.toList());
+        // 按槽位 order 升序排列（order 值越小在 HUD 越靠上）
+        currentSlots = winnerContainers.values().stream()
+                .filter(c -> !c.isEmpty())
+                .sorted(Comparator.comparingInt(SlotContainer::getSlotOrder))
+                .toList();
     }
 
     /**
-     * 获取当前帧已计算的提示列表（只读）。
+     * 获取当前帧已计算的 {@link SlotContainer} 列表（只读，已按槽位 order 排序）。
      *
-     * @return 提示列表，可能为空列表
+     * @return 非空列表，可能为空集合
      */
-    public List<HintEntry> getCurrentHints() {
-        return currentHints;
+    public List<SlotContainer> getCurrentSlots() {
+        return currentSlots;
     }
 }
