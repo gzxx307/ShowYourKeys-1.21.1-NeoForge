@@ -133,7 +133,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
      *   <li>流体桶：priority=0（仅在无更高优先级右键操作时生效）</li>
      * </ul>
      *
-     * <h3>流体检测修复</h3>
+     * <h3>流体检测</h3>
      * <p>{@code mc.hitResult} 使用 {@code ClipContext.Fluid.NONE}，射线会穿透水/熔岩。
      * 手持空桶面对流体源时，{@code state} 是流体后的固体方块，需通过
      * {@link #hasFluidSourceInSight(HintContext)} 补发流体感知射线修正。</p>
@@ -174,10 +174,8 @@ public class VanillaHintProvider implements IKeyHintProvider {
         }
 
         // ── USE 槽：流体桶 ────────────────────────────────────────────────────────
-        // 修复 1：SolidBucketItem（细雪桶）不继承 BucketItem，须先独立判断。
-        // 修复 2：空桶面对流体源时射线穿透，用 hasFluidSourceInSight 补发流体感知射线。
         if (heldItem instanceof SolidBucketItem) {
-            useSlot.add(Hint.fromMapping(mc.options.keyUse,
+            useSlot.add(Hint.fromMapping(20, mc.options.keyUse,
                     "hint.show_your_keys.place_liquid"));
 
         } else if (heldItem instanceof BucketItem bucket) {
@@ -190,10 +188,14 @@ public class VanillaHintProvider implements IKeyHintProvider {
                 FluidState fluidState = state.getFluidState();
                 boolean canScoop =
                         (fluidState.isSource() &&
+                                // 水与岩浆
                                 (fluidState.getType() == Fluids.WATER
                                         || fluidState.getType() == Fluids.LAVA))
+                                // 适配其他模组的默认判断
                                 || hasFluidSourceInSight(ctx)
+                                // 细雪
                                 || state.is(Blocks.POWDER_SNOW)
+                                // 含水方块
                                 || (state.getBlock() instanceof LayeredCauldronBlock
                                 && state.getValue(LayeredCauldronBlock.LEVEL) == 3);
 
@@ -202,6 +204,12 @@ public class VanillaHintProvider implements IKeyHintProvider {
                             "hint.show_your_keys.scoop_liquid"));
                 }
             }
+        }
+
+        // 末影水晶
+        if (heldItem instanceof EndCrystalItem && state.getBlock() instanceof BedBlock) {
+            useSlot.add(Hint.fromMapping(mc.options.keyUse,
+                    "hint.show_your_keys.place_end_crystal"));
         }
 
         // ── ATTACK 槽：挖掘（工具不对时显示警告前缀）────────────────────────────

@@ -22,6 +22,7 @@
   "hint.show_your_keys.shear":          "剪羊毛",
   "hint.show_your_keys.place_liquid":   "放置液体",
   "hint.show_your_keys.scoop_liquid":   "盛装液体",
+  "hint.show_your_keys.place_end_crystal": "放置末影水晶",
 
   "_comment_vehicle": "── 载具 ──",
   "hint.show_your_keys.dismount":             "下马 / 离开",

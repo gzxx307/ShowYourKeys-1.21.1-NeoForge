@@ -22,6 +22,7 @@
   "hint.show_your_keys.shear":          "Shear",
   "hint.show_your_keys.place_liquid":   "Place Liquid",
   "hint.show_your_keys.scoop_liquid":   "Scoop Liquid",
+  "hint.show_your_keys.place_end_crystal": "Place EndCrystal",
 
   "_comment_vehicle": "── Vehicles ──",
   "hint.show_your_keys.dismount":             "Dismount",
