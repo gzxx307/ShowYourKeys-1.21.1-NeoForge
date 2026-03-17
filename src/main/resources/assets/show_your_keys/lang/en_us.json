@@ -6,6 +6,7 @@
   "hint.show_your_keys.attack":          "Attack",
   "hint.show_your_keys.place_block":     "Place",
   "hint.show_your_keys.edit_sign":       "Edit Sign",
+  "hint.show_your_keys.open":            "Open",
 
   "_comment_item": "── Item use ──",
   "hint.show_your_keys.eat":            "Eat",

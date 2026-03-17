@@ -6,6 +6,7 @@
   "hint.show_your_keys.attack":          "攻击",
   "hint.show_your_keys.place_block":     "放置",
   "hint.show_your_keys.edit_sign":       "编辑告示牌",
+  "hint.show_your_keys.open":            "打开",
 
   "_comment_item": "── 物品使用 ──",
   "hint.show_your_keys.eat":            "食用",

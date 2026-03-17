@@ -133,7 +133,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
      *   <li>流体桶：priority=0（仅在无更高优先级右键操作时生效）</li>
      * </ul>
      *
-     * <h3>流体检测</h3>
+     * <h3>流体检测修复</h3>
      * <p>{@code mc.hitResult} 使用 {@code ClipContext.Fluid.NONE}，射线会穿透水/熔岩。
      * 手持空桶面对流体源时，{@code state} 是流体后的固体方块，需通过
      * {@link #hasFluidSourceInSight(HintContext)} 补发流体感知射线修正。</p>
@@ -149,11 +149,24 @@ public class VanillaHintProvider implements IKeyHintProvider {
         SlotContainer attackSlot = new SlotContainer(HintSlot.ATTACK);
 
         // ── USE 槽：方块交互 / 放置 ──────────────────────────────────────────────
+        //
+        // 检测顺序（优先级从高到低）：
+        //   1. 告示牌  → "编辑告示牌"
+        //   2. 打开 GUI（容器、工作台等）→ "打开"
+        //   3. 有交互但不开 GUI（门、拉杆等）→ "交互"
+        //   4. 持有方块可放置 → "放置"
+        //
+        // 蹲下时跳过 2/3，Minecraft 原版行为：蹲下右键绕过方块交互直接放置。
         if (!crouching) {
             if (block instanceof SignBlock) {
                 useSlot.add(Hint.fromMapping(mc.options.keyUse,
                         "hint.show_your_keys.edit_sign"));
+            } else if (isGuiBlock(ctx, state)) {
+                // 右键会打开界面（箱子、熔炉、工作台等）
+                useSlot.add(Hint.fromMapping(mc.options.keyUse,
+                        "hint.show_your_keys.open"));
             } else if (isInteractiveBlock(ctx, state)) {
+                // 右键有交互效果但不打开界面（门、拉杆、音符盒等）
                 useSlot.add(Hint.fromMapping(mc.options.keyUse,
                         "hint.show_your_keys.interact"));
             } else if (holdingBlock && canPlaceAtTarget(ctx)) {
@@ -175,7 +188,7 @@ public class VanillaHintProvider implements IKeyHintProvider {
 
         // ── USE 槽：流体桶 ────────────────────────────────────────────────────────
         if (heldItem instanceof SolidBucketItem) {
-            useSlot.add(Hint.fromMapping(20, mc.options.keyUse,
+            useSlot.add(Hint.fromMapping(mc.options.keyUse,
                     "hint.show_your_keys.place_liquid"));
 
         } else if (heldItem instanceof BucketItem bucket) {
@@ -188,14 +201,10 @@ public class VanillaHintProvider implements IKeyHintProvider {
                 FluidState fluidState = state.getFluidState();
                 boolean canScoop =
                         (fluidState.isSource() &&
-                                // 水与岩浆
                                 (fluidState.getType() == Fluids.WATER
                                         || fluidState.getType() == Fluids.LAVA))
-                                // 适配其他模组的默认判断
                                 || hasFluidSourceInSight(ctx)
-                                // 细雪
                                 || state.is(Blocks.POWDER_SNOW)
-                                // 含水方块
                                 || (state.getBlock() instanceof LayeredCauldronBlock
                                 && state.getValue(LayeredCauldronBlock.LEVEL) == 3);
 
@@ -204,12 +213,6 @@ public class VanillaHintProvider implements IKeyHintProvider {
                             "hint.show_your_keys.scoop_liquid"));
                 }
             }
-        }
-
-        // 末影水晶
-        if (heldItem instanceof EndCrystalItem && state.getBlock() instanceof BedBlock) {
-            useSlot.add(Hint.fromMapping(mc.options.keyUse,
-                    "hint.show_your_keys.place_end_crystal"));
         }
 
         // ── ATTACK 槽：挖掘（工具不对时显示警告前缀）────────────────────────────
@@ -256,40 +259,73 @@ public class VanillaHintProvider implements IKeyHintProvider {
     }
 
     /**
-     * 判断方块是否支持右键交互（打开 GUI 或触发交互效果）。
+     * 判断右键该方块是否会打开一个界面（GUI Screen）。
      *
+     * <p>满足此条件时显示"打开"提示，优先级高于普通"交互"。</p>
+     *
+     * <h3>检测层次</h3>
      * <ol>
-     *   <li>BlockTag：门 / 活板门 / 栅栏门 / 床 / 按钮</li>
-     *   <li>BlockEntity implements MenuProvider：覆盖所有容器（含模组容器）</li>
-     *   <li>无 BE 但开 GUI 的原版方块：工作台、铁砧、砂轮、附魔台、锻造台</li>
-     *   <li>无 GUI 但有交互效果：拉杆、音符盒、唱片机、钟、重生锚、蛋糕</li>
+     *   <li>{@code BlockEntity implements MenuProvider}：覆盖所有容器方块，
+     *       包括箱子、熔炉、漏斗、发射器、投掷器、酿造台，以及所有模组容器方块。</li>
+     *   <li>无 BE 但仍会打开 GUI 的原版方块：
+     *       工作台、铁砧、砂轮、附魔台、锻造台。</li>
      * </ol>
+     *
+     * <p><b>注意</b>：本方法不感知持有物品，仅判断方块本身是否具备打开界面的能力。
+     * 蹲下绕过方块交互的逻辑由调用处（{@code buildBlockHints}）负责。</p>
      */
-    private boolean isInteractiveBlock(HintContext ctx, BlockState state) {
+    private boolean isGuiBlock(HintContext ctx, BlockState state) {
         Block block = state.getBlock();
         BlockHitResult bhr = ctx.getBlockHitResult();
 
+        // 层次 1：BlockEntity implements MenuProvider
+        if (bhr != null) {
+            BlockEntity be = ctx.level().getBlockEntity(bhr.getBlockPos());
+            if (be instanceof MenuProvider) return true;
+        }
+
+        // 层次 2：无 BE 但打开 GUI 的原版方块
+        return block instanceof CraftingTableBlock
+                || block instanceof AnvilBlock
+                || block instanceof GrindstoneBlock
+                || block instanceof EnchantingTableBlock
+                || state.is(Blocks.SMITHING_TABLE);
+    }
+
+    /**
+     * 判断右键该方块是否会触发交互效果（但不打开界面）。
+     *
+     * <p>满足此条件时显示"交互"提示。
+     * 调用前应先排除 {@link #isGuiBlock(HintContext, BlockState)} 为 {@code true} 的情况，
+     * 避免同一方块同时匹配两个分支。</p>
+     *
+     * <h3>检测层次</h3>
+     * <ol>
+     *   <li>BlockTag：门 / 活板门 / 栅栏门 / 床 / 按钮（开/关、睡觉、触发）</li>
+     *   <li>无 GUI 但有交互效果的原版方块：
+     *       拉杆（切换状态）、音符盒（播放音符）、唱片机（放/取唱片）、
+     *       钟（敲响）、重生锚（设置重生点）、蛋糕（食用）</li>
+     * </ol>
+     *
+     * <p>TODO: 后续可用自定义 BlockTag {@code #show_your_keys:interactable}
+     * 替代第 2 层的硬编码，方便 Mod 注册自己的无 GUI 交互方块。</p>
+     */
+    private boolean isInteractiveBlock(HintContext ctx, BlockState state) {
+        Block block = state.getBlock();
+
+        // 层次 1：BlockTag
         if (state.is(BlockTags.DOORS) || state.is(BlockTags.TRAPDOORS)
                 || state.is(BlockTags.FENCE_GATES) || state.is(BlockTags.BEDS)
                 || state.is(BlockTags.BUTTONS)) {
             return true;
         }
 
-        if (bhr != null) {
-            BlockEntity be = ctx.level().getBlockEntity(bhr.getBlockPos());
-            if (be instanceof MenuProvider) return true;
-        }
-
-        if (block instanceof CraftingTableBlock || block instanceof AnvilBlock
-                || block instanceof GrindstoneBlock || block instanceof EnchantingTableBlock
-                || state.is(Blocks.SMITHING_TABLE)) {
-            return true;
-        }
-
-        // TODO: 后续可用 BlockTag #show_your_keys:interactable 替代此硬编码
-        return block instanceof LeverBlock || block instanceof NoteBlock
+        // 层次 2：无 GUI 但有交互效果的原版方块
+        return block instanceof LeverBlock
+                || block instanceof NoteBlock
                 || block instanceof JukeboxBlock
-                || state.is(Blocks.BELL) || state.is(Blocks.RESPAWN_ANCHOR)
+                || state.is(Blocks.BELL)
+                || state.is(Blocks.RESPAWN_ANCHOR)
                 || state.is(Blocks.CAKE);
     }
 
